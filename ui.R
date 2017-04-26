@@ -14,21 +14,23 @@ shinyUI (tagList(fluidPage(
     numericInput ("glucosecol", label = "glucosecol", value = 10),
     textInput ("max days", label = "maxdays", value = "F"),
     textInput ("extension", label = "ext", value = ".csv"),
-    textInput ("separator", label = "sep", value = ",")
+    textInput ("separator", label = "sep", value = ","),
+    fileInput ('files', label = 'files', multiple = T)
   ),
-  fluidRow(
-    wellPanel(
-             tags$div(class="form-group shiny-input-container", 
-                      tags$div(tags$label("File input")),
-                      tags$div(tags$label("Choose folder", class="btn btn-primary",
-                                          tags$input(id = "fileIn", webkitdirectory = TRUE, type = "file", style="display: none;", onchange="pressed()"))),
-                      tags$label("No folder choosen", id = "noFile"),
-                      tags$div(id="fileIn_progress", class="progress progress-striped active shiny-file-input-progress",
-                               tags$div(class="progress-bar")
-                      )     
-             )
-    )
-  ),
+  
+  # fluidRow(
+  #   wellPanel(
+  #            tags$div(class="form-group shiny-input-container", 
+  #                     tags$div(tags$label("File input")),
+  #                     tags$div(tags$label("Choose folder", class="btn btn-primary",
+  #                                         tags$input(id = "fileIn", webkitdirectory = TRUE, type = "file", style="display: none;", onchange="pressed()"))),
+  #                     tags$label("No folder choosen", id = "noFile"),
+  #                     tags$div(id="fileIn_progress", class="progress progress-striped active shiny-file-input-progress",
+  #                              tags$div(class="progress-bar")
+  #                     )     
+  #            )
+  #   )
+  # ),
   fluidRow(
     textOutput ("directory")
   )
