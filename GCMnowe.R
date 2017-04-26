@@ -471,8 +471,9 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                beforetrim = NA,
                                aftertrim = NA,
                                
-                               readCSVs = function (dir = getwd(), ext = self$extension, separator = self$separator) {
-                                 FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
+                               readCSVs = function (FileNames = list(), dir = getwd(), ext = self$extension, separator = self$separator) {
+                                 FileNames = FileNames
+                                 if (FileNames != list()) FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
                                  if (ext == '.xlsx' || ext == '.xls') {
                                    ListOfDfs = lapply (FileNames, read.xlsx, sheetIndex = 1, header = FALSE, stringsAsFactors = F)
                                  } else {
