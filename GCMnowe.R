@@ -318,7 +318,8 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                 self$datecol = datecol
                                 self$timecol = timecol
                                 
-                                if(!is.na(list)) private$aftertrim = list else self$loadFromDir(dir, perday = self$perday, dtformat = self$dtformat, max.days = self$max.days)
+                                # if(!is.na(list)) private$aftertrim = list else 
+                                self$loadFromDir(dir, perday = self$perday, dtformat = self$dtformat, max.days = self$max.days)
                                 # print(head(private$lob2))
                                 # sapply (self$get_lob(), function (x) {print (head(x$file))})
                                 self$removeShortMeasurements()
@@ -473,7 +474,7 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                
                                readCSVs = function (FileNames = list(), dir = getwd(), ext = self$extension, separator = self$separator) {
                                  FileNames = FileNames
-                                 if (FileNames != list()) FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
+                                 FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
                                  if (ext == '.xlsx' || ext == '.xls') {
                                    ListOfDfs = lapply (FileNames, read.xlsx, sheetIndex = 1, header = FALSE, stringsAsFactors = F)
                                  } else {
