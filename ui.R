@@ -1,4 +1,5 @@
 library (shiny)
+# source(paste0(getwd(), "scripts/calculator.R"))
 
 shinyUI (
     fluidPage(
@@ -12,18 +13,19 @@ shinyUI (
         numericInput ("timecol", label = "timecol", value = 3),
         numericInput ("dtcol", label = "dtcol", value = 4),
         numericInput ("glucosecol", label = "glucosecol", value = 10),
+        textInput ("dtformat", label = "Date format", value = "dmy_hms"),
         textInput ("max days", label = "maxdays", value = "F"),
         textInput ("extension", label = "ext", value = ".csv"),
         textInput ("separator", label = "sep", value = ","),
-        fileInput ('files', label = 'files', multiple = F, accept = c(
-          "text/csv",
-          "text/comma-separated-values,text/plain",
-          ".csv"))
+        fileInput ('files', label = 'files', multiple = T)
         ),
       fluidRow(
-        tableOutput ('print'),
-        verbatimTextOutput ('debug'),
-        tableOutput ('csv')
+        tableOutput ('files'),
+        # verbatimTextOutput ('debug'),
+        textOutput ('datapath'),
+        textOutput ('csv'),
+        getwd(),
+        paste0(getwd(), '/scripts/calculator.R')
       )
       )
   )
