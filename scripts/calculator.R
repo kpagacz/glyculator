@@ -51,7 +51,7 @@ Measurement = R6Class ('Measurement',
                            self$interval = 1440/perday
                            self$max.days = max.days
                            validation = private$validate()
-                           if (validation==FALSE) cat('Your input is incorrect. Check whether the number of measurements per day is correct. Only 288 or 96 are being accepted.\n')
+                           # if (validation==FALSE) cat('Your input is incorrect. Check whether the number of measurements per day is correct. Only 288 or 96 are being accepted.\n')
                            self$makePretty()
                          },
                          
@@ -64,7 +64,7 @@ Measurement = R6Class ('Measurement',
                            suppressWarnings(private$cutTT())
                            
                            if (suppressWarnings(self$areBreaks()) == TRUE) suppressWarnings(private$cutBreaks())
-                           if (self$areNAs() == TRUE) cat ('NAs w wynikach glikemii w pliku', self$id, '.xls. Opracuj plik recznie.\n')
+                           if (self$areNAs() == TRUE) #cat ('NAs w wynikach glikemii w pliku', self$id, '.xls. Opracuj plik recznie.\n')
                            private$appendIndex()
                            rownames(self$file) = NULL
                          },
@@ -76,7 +76,7 @@ Measurement = R6Class ('Measurement',
                                self$file = self$file[Ind:(Ind-1+self$perday*self$days),]
                                return (T)
                              } else {
-                               cat("There is no continous 48 hours-long part of" , self$id, " file. The measurement will be excluded from further analysis.)\n")
+                               # cat("There is no continous 48 hours-long part of" , self$id, " file. The measurement will be excluded from further analysis.)\n")
                                return (F)
                              }
                              # print(nrow(self$file))
@@ -257,7 +257,7 @@ Measurement = R6Class ('Measurement',
                            
                            #print(Longest)
                            if (Longest < self$perday*2) {
-                             cat ("There is no continous 48 hours-long part of", self$id, "file. The measurement will be excluded from further analysis. \n", sep = " ")
+                             # cat ("There is no continous 48 hours-long part of", self$id, "file. The measurement will be excluded from further analysis. \n", sep = " ")
                            } else {
                              self$file = self$file[StartIndexLongest:(EndIndexLongest+1),]
                            }
@@ -334,9 +334,9 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                               
                               loadFromFiles = function (files.list = self$files.list, perday, dtformat, max.days) {
                                 private$beforetrim = private$readCSVs (FileNames = files.list)
-                                cat ('Done loading.\n')
+                                # cat ('Done loading.\n')
                                 private$aftertrim = private$trimAll ()
-                                cat('Done trimming.\n')
+                                # cat('Done trimming.\n')
                                 
                                 listofobjects = lapply (private$aftertrim, function (x) {
                                   NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
@@ -352,9 +352,9 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                               loadFromDir = function (dir = getwd(), perday, dtformat, max.days) {
                                 # print ("dir")
                                 private$beforetrim = private$readCSVs (dir = dir)
-                                cat ('Done loading.\n')
+                                # cat ('Done loading.\n')
                                 private$aftertrim = private$trimAll ()
-                                cat('Done trimming.\n')
+                                # cat('Done trimming.\n')
                                 
                                 listofobjects = lapply (private$aftertrim, function (x) {
                                   NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
@@ -409,8 +409,8 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                   #cat(i, ' input \n')
                                 }
                                 
-                                write.xlsx (Results, 'Results.xlsx', showNA = F)
-                                print(c("Results saved to Results.xlsx"))
+                                # write.xlsx (Results, 'Results.xlsx', showNA = F)
+                                # print(c("Results saved to Results.xlsx"))
                                 return (Results)
                               
                               },
@@ -484,7 +484,7 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                beforetrim = NA,
                                aftertrim = NA,
                                
-                               readCSVs = function (FileNames = NULL, dir = getwd(), ext = self$extension, separator = self$separator) {
+                               readCSVs = function (FileNames = NULL, dir = getwd(), ext = self$extension, separator = self$separator, skipnum = self$headnrows) {
                                  if (is.null(FileNames)) FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
                                  if (ext == '.xlsx' || ext == '.xls') {
                                    ListOfDfs = lapply (FileNames, read.xlsx, sheetIndex = 1, header = FALSE, stringsAsFactors = F)
@@ -578,7 +578,7 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateSlope3()
                           private$calculateGRADE()
                           } else {
-                          cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
+                          # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
                             private$Output$Mean = NA
                             private$Output$SD = NA
                             private$Output$Median = NA
