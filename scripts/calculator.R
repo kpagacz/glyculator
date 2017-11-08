@@ -6,7 +6,6 @@ require (lubridate)
 require (stringr)
 require (ggplot2)
 require (fractal)
-#source (theme_default.R)
 
 fillGaps = function (vector) {
   v = vector
@@ -79,7 +78,6 @@ Measurement = R6Class ('Measurement',
                                # cat("There is no continous 48 hours-long part of" , self$id, " file. The measurement will be excluded from further analysis.)\n")
                                return (F)
                              }
-                             # print(nrow(self$file))
                          },
                          
                          areDiff5 = function() {
@@ -88,7 +86,6 @@ Measurement = R6Class ('Measurement',
                            datediff = abs(difftime(datelagged, self$file$DT, units = 'secs'))
                            logical = datediff > self$interval*60 - 2 & datediff < self$interval*60 + 2
                            logical[1] = TRUE
-                           #cat(datediff, logical)
                            return(all(logical))
                          },
                          
@@ -103,7 +100,6 @@ Measurement = R6Class ('Measurement',
                          },
                          
                          writeXLS = function(dir = getwd()) {
-                           #Date = as.data.frame(paste(day(self$file$DT), month(self$file$DT), substr(year(self$file$DT),3,4), sep = '.'))
                            Dates = self$file$DT
                            years = year(Dates)
                            months = month(Dates)
@@ -157,7 +153,6 @@ Measurement = R6Class ('Measurement',
                          
                          appendIndex = function() {
                            ids = data.frame(1:nrow(self$file))
-                           #cat (ids)
                            self$file = data.frame (self$file$DT, self$file$Glucose, ids[1])
                            colnames(self$file) = c('DT', 'Glucose', 'ID')
                          },
@@ -166,7 +161,6 @@ Measurement = R6Class ('Measurement',
                            # cut duplicates and differing by 1 sec (for some reason the second part of cutShorter5andDup left them intact)
                            datelagged = self$file$DT
                            datelagged[-1] = self$file$DT
-                           #print(datelagged)
                            datediff = abs(difftime(datelagged, self$file$DT, units = 'secs'))
                            datediff = datediff[-length(datediff)]
                            dup = datediff == 0 | datediff == 1
@@ -254,8 +248,6 @@ Measurement = R6Class ('Measurement',
                              EndIndexLongest = EndIndex
                              Longest = EndIndex - StartIndex
                            }
-                           
-                           #print(Longest)
                            if (Longest < self$perday*2) {
                              # cat ("There is no continous 48 hours-long part of", self$id, "file. The measurement will be excluded from further analysis. \n", sep = " ")
                            } else {
@@ -276,8 +268,6 @@ Measurement = R6Class ('Measurement',
                          
                        )
 )
-
-# As an input: a single data.frame with at least 5 columns: Date, Time, DateTime,  Glucose, ID.
 
 ##########################
 ListOfMeasurments = R6Class ('ListOfMeasurments',
@@ -340,17 +330,14 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                 
                                 listofobjects = lapply (private$aftertrim, function (x) {
                                   NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
-                                  #NewMeasure$makePretty() print (NewMeasure)
                                   return (NewMeasure)
                                 } 
                                 )
                                 
                                 private$lob2 = listofobjects
-                                #print(private$lob2)
                               },
                               
                               loadFromDir = function (dir = getwd(), perday, dtformat, max.days) {
-                                # print ("dir")
                                 private$beforetrim = private$readCSVs (dir = dir)
                                 # cat ('Done loading.\n')
                                 private$aftertrim = private$trimAll ()
@@ -358,13 +345,11 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                 
                                 listofobjects = lapply (private$aftertrim, function (x) {
                                   NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
-                                  # print (NewMeasure)
                                   return (NewMeasure)
                                 } 
                                 )
                                 
                                 private$lob2 = listofobjects
-                                #print(private$lob2)
                               },
                               
                               get_aftertrim = function () {
@@ -400,15 +385,11 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                               },
                               
                               getResults = function () {
-                                #Results = Calculate1$new(private$lob2[[1]])$getOutput()
                                 Results = structure(list(), class = "data.frame")
                                 for (i in seq.int(length.out = length(self$get_lob()))) {
                                   res = Calculate1$new(self$get_lob()[[i]])$getOutput()
-                                  #print (res)
                                   Results = rbind (Results, res)
-                                  #cat(i, ' input \n')
                                 }
-                                
                                 # write.xlsx (Results, 'Results.xlsx', showNA = F)
                                 # print(c("Results saved to Results.xlsx"))
                                 return (Results)
@@ -416,12 +397,10 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                               },
                               
                               removeMeasurementsWithNAs = function () {
-                                # print("haha")
                                 NAsLogicVector = sapply (self$get_lob(), function(x) {
                                   return (x$areNAs())  
                                 }
                                 )
-                                #print (NAsLogicVector)
                                 private$lob2 = private$lob2[!NAsLogicVector]
                               },
                               
@@ -431,7 +410,6 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                   return (x$areBreaks())
                                 }
                                 )
-                                # print (BreaksLogicVector)
                                 private$lob2 = private$lob2[!BreaksLogicVector]
                               },
                               
@@ -441,9 +419,7 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                   return(nrow(x$file))
                                 }
                                 )
-                                # print(v)
                                 ShortLogicVector = v >= (self$perday*2)
-                                # print (c('notshortmeasurement',ShortLogicVector))
                                 private$lob2 = private$lob2[ShortLogicVector]
                               },
                               
@@ -460,7 +436,6 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                     plot = ggplot(x$file, aes (x = DT, y = Glucose)) + 
                                       geom_point() + 
                                       theme_default +
-                                      #scale_x_continuous(name = "Time Stamp") +
                                       expand_limits(y=0) +
                                       scale_y_continuous(expand = c(0,0), limits = c(0,1.05*max(x$file[2])))
                                     return (plot)
@@ -490,32 +465,24 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                    ListOfDfs = lapply (FileNames, read.xlsx, sheetIndex = 1, header = FALSE, stringsAsFactors = F)
                                  } else {
                                     ListOfDfs = lapply (FileNames, read.csv, sep = separator, header = FALSE, encoding = "UTF-16", stringsAsFactors = F)
-                                    # print (ListOfDfs)
                                     return (ListOfDfs)
                                  }
                                },
                                
                                trimDf = function (df, dtcol = self$dtcol, datecol = self$datecol, timecol = self$timecol, glucosecol = self$glucosecol) {
                                  id = as.character(df[self$idrow[[1]], self$idcol[[1]]])
-                                 #cat(id)
-                                 #print(NewDf)
-                                 #print (c(datecol, timecol, glucosecol))
                                  
                                  if(is.na(dtcol)) {
                                    dtcol = ncol(df)+1
                                    df = private$joinDateAndTime(df, datecol = datecol, timecol = timecol, dtcol = dtcol)
                                  }
                                  NewDf = df[self$headnrows:nrow(df),]
-                                 #print (head(NewDf))
                                  NewDf = NewDf[,c(dtcol,glucosecol)]
                                  norows = nrow(NewDf)-10
                                  NewDf = NewDf[1:norows,]
                                  rownames (NewDf) = NULL
-                                 #print(NewDf)
                                  NewDf[1,3] = id
                                  colnames(NewDf) = c('DT', 'Glucose')
-                                                       #, 'ID')
-                                 #print (NewDf)
                                  return (NewDf)
                                  },
                                
@@ -556,7 +523,6 @@ Calculate1 = R6Class ('Calculate1',
     
                         calculateEverything = function () {
                           private$calculateNoDaysAndNoRecords()
-                          #print (private$Measurement$id)
                           if (private$NoDays >= 2) {
                           private$calculateMean()
                           private$calculateSD()
