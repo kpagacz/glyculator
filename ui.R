@@ -47,14 +47,27 @@ shinyUI (
       ),
       tabPanel(title = "About",
                  fluidRow(
-                    "GlyCulator2 was created by Konrad Pagacz to calculate glycaemic variability indices from raw continuous glucose monitoring 
-                    (CGM) or flash glucose monitoring (FGM) data. It accepts raw CGM or FGM files in .xls, .xlsx, .csv, .txt formats and calculates
-                    the following glycaemic variability indices: mean, standard deviation (SD), median, coefficient of variation, M100 index,
-                    J-index, mean amplitude of glycaemic excursion, mean of daily differences, continuous overall net glycaemic action (CONGA)
-                    percent of measurements below 70 mg/dl (3.9 mmol), percent of measurements over 180 mg/dl (10 mmol/l), glycaemic risk assessment
-                    in diabetes equation (GRADE) and GRADE's appropriate percentages."
-                 )
-      )
+                    tags$div(
+                      list (
+                        tags$p ("GlyCulator2 was created by Konrad Pagacz to calculate glycaemic variability indices from raw continuous glucose monitoring 
+                        (CGM) or flash glucose monitoring (FGM) data. It accepts raw CGM or FGM files in .xls, .xlsx, .csv, .txt formats and calculates
+                        the following glycaemic variability indices:"),
+                        tags$ul (
+                          tags$li("mean"),
+                          tags$li("standard deviation (SD)"),
+                          tags$li("median, coefficient of variation, M100 index"),
+                          tags$li("J-index"),
+                          tags$li("mean amplitude of glycaemic excursion"),
+                          tags$li("mean of daily differences"),
+                          tags$li("continuous overall net glycaemic action (CONGA)"),
+                          tags$li("percent of measurements below 70 mg/dl (3.9 mmol)"),
+                          tags$li("percent of measurements over 180 mg/dl (10 mmol/l)"), 
+                          tags$li("glycaemic risk assessment in diabetes equation (GRADE) and GRADE's appropriate percentages.")
+                        )
+                      )
+                    )
+                )
     )
     )
+  )
 )

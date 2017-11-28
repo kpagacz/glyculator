@@ -392,6 +392,7 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                 }
                                 # write.xlsx (Results, 'Results.xlsx', showNA = F)
                                 # print(c("Results saved to Results.xlsx"))
+                                Results = format(round(Results, 2), nsmall = 2)
                                 return (Results)
                               
                               },
