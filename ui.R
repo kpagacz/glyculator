@@ -55,16 +55,31 @@ shinyUI (
                         tags$ul (
                           tags$li("mean"),
                           tags$li("standard deviation (SD)"),
-                          tags$li("median, coefficient of variation, M100 index"),
+                          tags$li("median, coefficient of variation (CV), M100 index"),
                           tags$li("J-index"),
-                          tags$li("mean amplitude of glycaemic excursion"),
-                          tags$li("mean of daily differences"),
+                          tags$li("mean amplitude of glycaemic excursion (MAGE)"),
+                          tags$li("mean of daily differences (MODD)"),
                           tags$li("continuous overall net glycaemic action (CONGA)"),
                           tags$li("percent of measurements below 70 mg/dl (3.9 mmol)"),
                           tags$li("percent of measurements over 180 mg/dl (10 mmol/l)"), 
                           tags$li("glycaemic risk assessment in diabetes equation (GRADE) and GRADE's appropriate percentages.")
                         )
                       )
+                    ),
+                    tags$div (
+                      tags$p ("M100, J-index were calculated using formulas provided by F. John Service in:
+                              Service, F. J. (2013). Glucose Variability. Diabetes, 62(5), 1398–1404. http://doi.org/10.2337/db12-1396."),
+                      tags$p ("MAGE algorithm was adapted from: Baghurst, P. A. (2011). Calculating the mean amplitude of 
+                              glycemic excursion from continuous glucose monitoring data: an automated algorithm. Diabetes 
+                              Technology & Therapeutics, 13(3), 296–302. https://doi.org/10.1089/dia.2010.0090."),
+                      tags$p ("MODD and CONGA algorithms were implemented after: McDonnell, C. M., Donath, S. M., Vidmar, 
+                              S. I., Werther, G. a, & Cameron, F. J. (2005). A novel approach to continuous glucose 
+                              analysis utilizing glycemic variation. Diabetes Technology & Therapeutics, 7(2), 253–63.
+                              https://doi.org/10.1089/dia.2005.7.253."),
+                      tags$p ("GRADE calculations follow: Hill, N. R., Hindmarsh, P. C., Stevens, R. J., 
+                              Stratton, I. M., Levy, J. C., & Matthews, D. R. (2007). A method for assessing quality 
+                              of control from glucose profiles. Diabetic Medicine : A Journal of the British
+                              Diabetic Association, 24(7), 753–8. https://doi.org/10.1111/j.1464-5491.2007.02119.x.")
                     )
                 )
     )
