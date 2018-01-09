@@ -1,5 +1,8 @@
+if (!require("shinythemes")) { install.packages("shinythemes")}
 library (shiny)
 library (shinythemes)
+
+
 
 Introduction = tabPanel(title = "Introduction")
 
@@ -42,7 +45,28 @@ shinyUI (
       ),
       tabPanel(title = "Instructions - how to use",
                  fluidRow(
-                    "Glyculator2 requires user to submit:"
+                   tags$div(
+                     list(
+                        tags$p ("The most important while using GlyCulator2 is: the program requires files analyzed to be formatted in a uniform way. Since a user is asked to provide some information about the files, the pieces of information need to hold true for all files provided. If a user wants to analyze two types of files, I recommend to prepare two batches of files and analyze them with GlyCulator2 seperately."),
+                       tags$p ("Glyculator2 requires user to submit: (please note that the numbering of columns and rows begins from 1)",
+                               tags$ul(
+                                 tags$li("column number and row number of a cell which contains a name or identification of each file (must be the same in all files)"),
+                                 tags$li("number of time points per day - which is related to the interval of the recordings. Please input 288, if the interval is 5 minutes"),
+                                 tags$li("number of header rows in all files - this an optional argument. If your files do not contain headers, change it to 0"),
+                                 tags$li("you have to specify either the numbers of columns with dates and hours or the number of a column which contains the full date. If your files contain no column with date and hour, please leave the field blank. If your files do not have two seperate columns with dates and numbers, you can leave the appropriate fields empty or leave them as they are. GlyCulator2 will take only the column with date and hour to consideration"),
+                                 tags$li("column number with glucose values"),
+                                 tags$li("format of the date: please specify the order of day, month, year as well as hours, minutes and optionally seconds. E.g.: mdy_hm for a format like this: 9/27/99 13:13; ymd_hms for a format like this: 17.10.21 13:41:59. The seperator can be: :, ., /"),
+                                 tags$li("provide file extension of your files. Currently supported are: .csv, .xlsx, .xls"),
+                                 tags$li("if your files are in a .csv format, please provide a character which fulfills the seperator role in your files"),
+                                 tags$li("files to analyze. You can choose as many files from you PC, by clicking the <Browse> button.")
+                               )),
+                       tags$p("To better illustrate what is what in a CGM file, following images of a raw CGM data file are marked with names of input fields."),
+                       tags$div(img(src = "arg cols.jpg", width = 770, height = 306, align = "center", title = "Column numbers explained", Introduction = "Column numbers explained")),
+                       tags$div(img(src = "header.jpg", width = 959, height = 201, Introduction = "Header rows number")),
+                       tags$div(img(src = "id expl.jpg", width = 563, height = 214, Introduction = "ID cell row and column number"))
+                     )
+                   )
+                    
                  )
       ),
       tabPanel(title = "About",
