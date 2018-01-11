@@ -13,7 +13,7 @@ fillGaps = function (vector) {
   if (length(na)>0) {
     if (na[1] == 1) { na = na[-1] }
     for (i in na) {
-    v[i] = v[i-1] + v[i+1]
+    v[i] = (v[i-1] + v[i+1])/2
     }
   }
   return (vector)
@@ -26,6 +26,10 @@ getIndOfHour = function (vector, hour) {
   return (Ind)
 }
 
+night_block = c(0,24,1,2,3,4,5)
+morning_block = c(6,7,8,9,10,11)
+afternoon_block = c(12,13,14,15,16,17,18,19,20,21,22,23)
+
 # lom = ListOfMeasurments$new(extension = '.txt', separator = '\t', max.days = T, glucosecol = 4, dtcol = 2, datecol = NA, timecol = NA, dtformat = 'ymd_hm', idcol = 1, idrow = 1, perday = 96)
 # lom = ListOfMeasurments$new(extension = '.xlsx', glucosecol = 31, dtcol = NA, timecol = 3, datecol = 2, max.days = T, headnrows = 10, idrow = 1, idcol = 2, dtformat = 'ymd_hms')
 
@@ -34,6 +38,7 @@ getIndOfHour = function (vector, hour) {
 Measurement = R6Class ('Measurement',
                        public = list (
                          file = NA,
+                         filenas = NA,
                          perday = NA,
                          id = NA,
                          interval = NA,
@@ -56,16 +61,18 @@ Measurement = R6Class ('Measurement',
                          
                          makePretty = function () {
                            self$file$Glucose = private$fillGaps(self$file$Glucose)
-                           private$cutNAs()
                            suppressWarnings(private$cutDup())
                            suppressWarnings(private$cutTTTTTT())
                            suppressWarnings(private$cutTTTT())
                            suppressWarnings(private$cutTT())
+                           self$filenas = self$file
+                           private$cutNAs()
                            
                            if (suppressWarnings(self$areBreaks()) == TRUE) suppressWarnings(private$cutBreaks())
                            if (self$areNAs() == TRUE) #cat ('NAs w wynikach glikemii w pliku', self$id, '.xls. Opracuj plik recznie.\n')
                            private$appendIndex()
                            rownames(self$file) = NULL
+                           rownames(self$filenas) = NULL
                          },
                          
                          limitToMaxDays = function() {
@@ -154,7 +161,9 @@ Measurement = R6Class ('Measurement',
                          appendIndex = function() {
                            ids = data.frame(1:nrow(self$file))
                            self$file = data.frame (self$file$DT, self$file$Glucose, ids[1])
+                           self$filenas = data.frame(self$filenas$DT, self$filenas$Glucose,ids[1])
                            colnames(self$file) = c('DT', 'Glucose', 'ID')
+                           colnames(self$filenas) = c('DT', 'Glucose', 'ID')
                          },
                          
                          cutDup = function () {
@@ -290,7 +299,7 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                               
                               
                               
-                              initialize = function (files.list = NULL, dir = getwd(), max.days = F, perday = 288, idrow = 3, idcol = 2, headnrows = 13, datecol = 2, timecol = 3, dtcol = 4, glucosecol = 10, separator = ',', extension = '.csv', dtformat = 'dmy_hms') {
+                              initialize = function (files.list = NULL, dir = getwd(), max.days = T, perday = 288, idrow = 3, idcol = 2, headnrows = 13, datecol = 2, timecol = 3, dtcol = 4, glucosecol = 10, separator = ',', extension = '.csv', dtformat = 'dmy_hms') {
                                 #self$removeMeasurementsWithNAs()
                                 
                                 self$files.list = files.list
@@ -505,13 +514,12 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
 ###############################
 Calculate1 = R6Class ('Calculate1',
                       public = list (
-    
+                        
     
                         initialize = function (Meas) {
                           private$Measurement = Meas
                           rownames(private$Output) = Meas$id
                           colnames(private$Output) = 'Number of measurements'
-                          self$calculateEverything()
                         },
     
                         getMeasurement = function () {
@@ -519,56 +527,94 @@ Calculate1 = R6Class ('Calculate1',
                         },
     
                         getOutput = function() {
+                          self$find_blocks()
+                          private$calculateNoNAs()
+                          self$calculateWithNas(name = "_whole")
+                          self$calculateWithNas(df = private$df_night, name = "_night")
+                          self$calculateWithNas(df = private$df_morning, name = "_morning")
+                          self$calculateWithNas(df = private$df_afternoon, name = "_afternoon")
+                          self$calculateEverything()
+                          
                           return (as.data.frame(private$Output))
                         },
     
-                        calculateEverything = function () {
-                          private$calculateNoDaysAndNoRecords()
+                        calculateEverything = function (df = private$Measurement$file) {
+                          private$calculateNoDaysAndNoRecords(df = df)
                           if (private$NoDays >= 2) {
-                          private$calculateMean()
-                          private$calculateSD()
-                          private$calculateMedian()
-                          private$calculateCV()
-                          private$calculateM100()
-                          private$calculateJ()
-                          private$calculateMAGE()
-                          private$calculateMODD()
-                          private$calculateCONGA1h()
-                          private$calculateCONGA2h()
-                          private$calculateCONGA3h()
-                          private$calculateCONGA4h()
-                          private$calculateCONGA6h()
-                          private$calculateHypo()
-                          private$calculateHyper()
-                          private$calculateSlope1()
-                          private$calculateSlope2()
-                          private$calculateSlope3()
-                          private$calculateGRADE()
+                          private$calculateMean(df = df)
+                          private$calculateSD(df = df)
+                          private$calculateMedian(df = df)
+                          private$calculateCV(df = df)
+                          private$calculateM100(df = df)
+                          private$calculateJ(df = df)
+                          private$calculateMAGE(df = df)
+                          private$calculateMODD(df = df)
+                          private$calculateCONGA1h(df = df)
+                          private$calculateCONGA2h(df = df)
+                          private$calculateCONGA3h(df = df)
+                          private$calculateCONGA4h(df = df)
+                          private$calculateCONGA6h(df = df)
+                          private$calculateHypo(df = df)
+                          private$calculateHyper(df = df)
+                          private$calculateGRADE(df = df)
                           } else {
                           # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
-                            private$Output$Mean = NA
-                            private$Output$SD = NA
-                            private$Output$Median = NA
-                            private$Output$CV = NA
-                            private$Output$M100 = NA
-                            private$Output$J = NA
-                            private$Output$MAGE = NA
-                            private$Output$MODD = NA
-                            private$Output$CONGA1h = NA
-                            private$Output$CONGA2h = NA
-                            private$Output$CONGA3h = NA
-                            private$Output$CONGA4h = NA
-                            private$Output$CONGA6h = NA
-                            private$Output$Percent_of_measurements_below_70mgdl = NA
-                            private$Output$Percent_of_measurements_over_180mgdl = NA
-                            private$Output$Alpha1_DFA = NA
-                            private$Output$Alpha2_DFA = NA
-                            private$Output$Alpha3_DFA = NA
-                            private$Output$GRADE = NA
-                            private$Output$GRADE_hypo_percent = NA
-                            private$Output$GRADE_eu_percent = NA
-                            private$Output$GRADE_hyper_percent = NA
+                          private$Output$Mean = NA
+                          private$Output$SD = NA
+                          private$Output$Median = NA
+                          private$Output$CV = NA
+                          private$Output$M100 = NA
+                          private$Output$J = NA
+                          private$Output$MAGE = NA
+                          private$Output$MODD = NA
+                          private$Output$CONGA1h = NA
+                          private$Output$CONGA2h = NA
+                          private$Output$CONGA3h = NA
+                          private$Output$CONGA4h = NA
+                          private$Output$CONGA6h = NA
+                          private$Output$Percent_of_measurements_below_70mgdl = NA
+                          private$Output$Percent_of_measurements_over_180mgdl = NA
+                          private$Output$GRADE = NA
+                          private$Output$GRADE_hypo_percent = NA
+                          private$Output$GRADE_eu_percent = NA
+                          private$Output$GRADE_hyper_percent = NA
                         }
+                      },
+                      
+                      calculateWithNas = function (df = private$Measurement$filenas, name) {
+                        if (T) {
+                          private$calculateMean(df = df, name = name)
+                          private$calculateMedian(df = df, name = name)
+                          private$calculateSD(df = df, name = name)
+                          private$calculateCV(df = df, name = name)
+                          private$calculateM100(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculateJ(df = df, name = name)
+                          private$calculateHypo(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculateHyper(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculateGRADE(df = df[!is.na(df$Glucose),], name = name)
+                        } else {
+                          # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
+                          private$Output$Mean = NA
+                          private$Output$SD = NA
+                          private$Output$Median = NA
+                          private$Output$CV = NA
+                          private$Output$M100 = NA
+                          private$Output$J = NA
+                          private$Output$Percent_of_measurements_below_70mgdl = NA
+                          private$Output$Percent_of_measurements_over_180mgdl = NA
+                          private$Output$GRADE = NA
+                        }
+                      },
+                      
+                      find_blocks = function (df = private$Measurement$filenas) {
+                        night = which(hour(df$DT) %in% night_block)
+                        private$df_night = df[night,]
+                        
+                        morning = which(hour(df$DT) %in% morning_block)
+                        private$df_morning = df[morning,]
+                        
+                        afternoon = which(hour(df$DT) %in% afternoon_block)
+                        private$df_afternoon = df[afternoon,]
                       }
                       ),
                       private = list (
@@ -577,57 +623,68 @@ Calculate1 = R6Class ('Calculate1',
                         NoDays = NULL,
                         NoRecords = NULL,
                         ExcursionLimit = numeric(),
+                        df_night = NULL,
+                        df_morning = NULL,
+                        df_afternoon = NULL,
+                        
+                        calculateNoNAs = function (df = private$Measurement$filenas, name = "") {
+                          norows = nrow(df)
+                          noNAs = sum(is.na(df$Glucose))
+                          percent = 100 * (norows - noNAs) / norows
+                          
+                          name = paste0("Average tests per day", name)
+                          private$Output[[name]] = percent
+                        },
     
-    
-                        calculateNoDaysAndNoRecords = function () {
-                          NoDays = floor(nrow(private$Measurement$file)/private$Measurement$perday)
+                        calculateNoDaysAndNoRecords = function (df) {
+                          NoDays = floor(nrow(df)/private$Measurement$perday)
                           private$NoDays = NoDays
                           #IMPORTANT: next line is setting the days to calculate
-                          private$NoRecords = nrow (private$Measurement$file)
+                          private$NoRecords = nrow (df)
                           private$Output[1,1] = private$NoRecords
                         },
     
-                        calculateMean = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateMean = function(df, name = "") {
                           Mean = mean(df$Glucose, na.rm = TRUE)
-                          private$Output$Mean = Mean
+                          name = paste0("Mean", name)
+                          private$Output[[name]] = Mean
                         },
     
-                        calculateSD = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateSD = function(df, name = "") {
                           SD = sd(df$Glucose, na.rm = TRUE)
-                          private$Output$SD = SD
+                          name = paste0("SD", name)
+                          private$Output[[name]] = SD
                           private$ExcursionLimit = SD
                         },
     
-                        calculateMedian = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateMedian = function(df, name = "") {
                           Median = median(df$Glucose, na.rm = TRUE)
-                          private$Output$Median = Median
+                          name = paste0("Median", name)
+                          private$Output[[name]] = Median
                         },
     
-                        calculateCV = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateCV = function(df, name = "") {
                           CV = 100 * (sd(df$Glucose, na.rm = TRUE)/mean(df$Glucose, na.rm = TRUE))
-                          private$Output$CV = CV
+                          name = paste0("CV", name)
+                          private$Output[[name]] = CV
                         },
     
-                        calculateM100 = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateM100 = function(df, name = "") {
                           M100 = mean(1000*abs(log(df$Glucose/100, 10)))
-                          private$Output$M100 = M100
+                          name = paste0("M100", name)
+                          private$Output[[name]] = M100
                         },
                         
-                        calculateJ = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateJ = function(df, name = "") {
                           Mean = mean(df$Glucose, na.rm = TRUE)
                           SD = sd(df$Glucose, na.rm  = TRUE)
                           J = 0.001*(Mean + SD)*(Mean + SD)
-                          private$Output$J = J
+                          name = paste0("J", name)
+                          private$Output[[name]] = J
                         },
                         
-                        calculateMAGE = function() {
-                          v = private$Measurement$file$Glucose[1:private$NoRecords]
+                        calculateMAGE = function(df, name = "") {
+                          v = df$Glucose
                           
                           if(max(v) - min(v) <= private$ExcursionLimit) { 
                             private$Output$MAGE = "There are no excursion in the file." 
@@ -681,26 +738,27 @@ Calculate1 = R6Class ('Calculate1',
                           
                           if(logic == FALSE) {
                             MAGE = private$calculateAmplitudes(vector = v, mins = mins, maxs = maxs)
-                            private$Output$MAGE = as.numeric(MAGE)
+                            name = paste0("MAGE", name)
+                            private$Output[[name]] = MAGE
                           } else {
                             private$Output$MAGE = "Unable to calculate MAGE. Visual analysis should be performed."
                           }
                         },
                         
-                        calculateMODD = function() {
+                        calculateMODD = function(df, name = "") {
                             DayIntervalDiff = vector()
-                            v = private$Measurement$file$Glucose[1:private$NoRecords]
+                            v = df$Glucose
                             for (i in seq.int (length.out = length(v)/2)){
                               DayIntervalDiff = append(DayIntervalDiff, abs(v[i] - v[i+private$Measurement$perday]))
                             }
                             #printing DayIntervalDiff
                             #cat(DayIntervalDiff)
                             MODD = mean (DayIntervalDiff)
-                            private$Output$MODD = MODD
+                            name = paste0("MODD", name)
+                            private$Output[[name]] = MODD
                         },
                         
-                        calculateCONGA1h = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateCONGA1h = function(df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Hours = 1
                           Differences = vector()
@@ -711,11 +769,11 @@ Calculate1 = R6Class ('Calculate1',
                           Mean = mean(Differences)
                           CONGA = sqrt(sum((Mean - Differences)^2)/length(Differences) - 1)
                           #cat(CONGA)
-                          private$Output$CONGA1h = CONGA
+                          name = paste0("CONGA1h", name)
+                          private$Output[[name]] = CONGA
                         },
                         
-                        calculateCONGA2h = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateCONGA2h = function(df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Hours = 2
                           Differences = vector()
@@ -726,11 +784,11 @@ Calculate1 = R6Class ('Calculate1',
                           Mean = mean(Differences)
                           CONGA = sqrt(sum((Mean - Differences)^2)/length(Differences) - 1)
                           #cat(CONGA)
-                          private$Output$CONGA2h = CONGA
+                          name = paste0("CONGA2h", name)
+                          private$Output[[name]] = CONGA
                         },
                         
-                        calculateCONGA3h = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateCONGA3h = function(df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Hours = 3
                           Differences = vector()
@@ -741,11 +799,11 @@ Calculate1 = R6Class ('Calculate1',
                           Mean = mean(Differences)
                           CONGA = sqrt(sum((Mean - Differences)^2)/length(Differences) - 1)
                           #cat(CONGA)
-                          private$Output$CONGA3h = CONGA
+                          name = paste0("CONGA3h", name)
+                          private$Output[[name]] = CONGA
                         },
                         
-                        calculateCONGA4h = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateCONGA4h = function(df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Hours = 4
                           Differences = vector()
@@ -756,11 +814,11 @@ Calculate1 = R6Class ('Calculate1',
                           Mean = mean(Differences)
                           CONGA = sqrt(sum((Mean - Differences)^2)/length(Differences) - 1)
                           #cat(CONGA)
-                          private$Output$CONGA4h = CONGA
+                          name = paste0("CONGA4h", name)
+                          private$Output[[name]] = CONGA
                         },
                         
-                        calculateCONGA6h = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateCONGA6h = function(df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Hours = 6
                           Differences = vector()
@@ -771,41 +829,39 @@ Calculate1 = R6Class ('Calculate1',
                           Mean = mean(Differences)
                           CONGA = sqrt(sum((Mean - Differences)^2)/length(Differences) - 1)
                           #cat(CONGA)
-                          private$Output$CONGA6h = CONGA
+                          name = paste0("CONGA6h", name)
+                          private$Output[[name]] = CONGA
                         },
                         
-                        calculateHypo = function () {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateHypo = function (df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Percent = 100 * sum (Glucose < 70)/length (Glucose)
-                          PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
-                          private$Output$Percent_of_measurements_below_70mgdl = Percent
+                          # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                          name = paste0("Time spent below 70 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateHyper = function () {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateHyper = function (df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           Percent = 100 * sum (Glucose > 180)/length (Glucose)
-                          PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
-                          private$Output$Percent_of_measurements_over_180mgdl = Percent
+                          # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                          name = paste0("Time spent over 180 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
                         calculateSlope1 = function () {
-                          df = private$Measurement$file[1:private$NoRecords, ]
                           Glucose = as.vector(df$Glucose)
                           alpha1 = DFA(Glucose, scale.min = 2, scale.max = private$Measurement$perday/12)[[1]]
                           private$Output$Alpha1_DFA = alpha1
                         },
                         
                         calculateSlope2 = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
                           Glucose = as.vector (df$Glucose)
                           alpha2 = DFA(Glucose, scale.min = private$Measurement$perday/12, scale.max = private$Measurement$perday/4)[[1]]
                           private$Output$Alpha2_DFA = alpha2
                         },
                         
                         calculateSlope3 = function() {
-                          df = private$Measurement$file[1:private$NoRecords, ]
                           Glucose = as.vector (df$Glucose)
                           alpha3 = DFA(Glucose, scale.min = private$Measurement$perday/4, scale.max = private$Measurement$perday)[[1]]
                           private$Output$Alpha3_DFA = alpha3
@@ -1205,27 +1261,30 @@ Calculate1 = R6Class ('Calculate1',
                           return (Ind)
                         },
                         
-                        calculateGRADE = function () {
-                          df = private$Measurement$file[1:private$NoRecords, ]
+                        calculateGRADE = function (df, name = "") {
                           Glucose = as.vector(df$Glucose)
                           GRADEs = 425 * ((log10(log10(Glucose/18)) + 0.16)^2)
                           GRADE = mean(GRADEs)
-                          private$Output$GRADE = GRADE
+                          name = paste0("GRADE", name)
+                          private$Output[[name]] = GRADE
                           
                           #calculating GRADE hypoglycaemia percent
                           hypos = which(Glucose < 90)
                           HypoPercent = 100*sum(GRADEs[hypos])/sum(GRADEs)
-                          private$Output$GRADE_hypo_percent = HypoPercent
+                          name = paste0("GRADE_hyp", name)
+                          private$Output[[name]] = HypoPercent
                           
                           #calculating GRADE euglycaemia percent
                           eus = which (Glucose>=90 & Glucose<=140)
                           EuPercent = 100*sum(GRADEs[eus])/sum(GRADEs)
-                          private$Output$GRADE_eu_percent = EuPercent
+                          name = paste0("GRADE_eu", name)
+                          private$Output[[name]] = EuPercent
                           
                           #calculating GRADE hyperglycaemia percent
                           hypers = which(Glucose > 140)
                           HyperPercent = 100*sum(GRADEs[hypers])/sum(GRADEs)
-                          private$Output$GRADE_hyper_percent = HyperPercent
+                          name = paste0("GRADE_hyper", name)
+                          private$Output[[name]] = HyperPercent
                         }
             
 ),

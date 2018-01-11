@@ -8,7 +8,7 @@ observeEvent(input$button, {
     withProgress(message = "calculation in progress", detail = 'It may take up to a few minutes...',
                  value = 0, {
                    
-                  # Here is where the magic happens - listofmeasurements definition
+                  # Here is where the magic happens - listofmeasurements declaration
                   d = ListOfMeasurments$new(files.list = unlist(input$files$datapath),
                                         dir = getwd(), max.days = input$maxdays, perday = input$perday,
                                         idrow = input$idrow, 
