@@ -519,7 +519,7 @@ Calculate1 = R6Class ('Calculate1',
                         initialize = function (Meas) {
                           private$Measurement = Meas
                           rownames(private$Output) = Meas$id
-                          colnames(private$Output) = 'Number of measurements'
+                          colnames(private$Output) = 'Average tests per day'
                         },
     
                         getMeasurement = function () {
@@ -531,8 +531,9 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateNoNAs()
                           self$calculateWithNas(name = "_whole")
                           self$calculateWithNas(df = private$df_night, name = "_night")
-                          self$calculateWithNas(df = private$df_morning, name = "_morning")
-                          self$calculateWithNas(df = private$df_afternoon, name = "_afternoon")
+                          self$calculateWithNas(df = private$df_wake, name = "_wake")
+                          # self$calculateWithNas(df = private$df_morning, name = "_morning")
+                          # self$calculateWithNas(df = private$df_afternoon, name = "_afternoon")
                           self$calculateEverything()
                           
                           return (as.data.frame(private$Output))
@@ -545,6 +546,8 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateSD(df = df)
                           private$calculateMedian(df = df)
                           private$calculateCV(df = df)
+                          private$calculateBGI(df = df)
+                          private$calculateA1c(df = df)
                           private$calculateM100(df = df)
                           private$calculateJ(df = df)
                           private$calculateMAGE(df = df)
@@ -587,6 +590,8 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateMedian(df = df, name = name)
                           private$calculateSD(df = df, name = name)
                           private$calculateCV(df = df, name = name)
+                          private$calculateBGI(df = df, name = name)
+                          private$calculateA1c(df = df, name = name)
                           private$calculateM100(df = df[!is.na(df$Glucose),], name = name)
                           private$calculateJ(df = df, name = name)
                           private$calculateHypo(df = df[!is.na(df$Glucose),], name = name)
@@ -597,6 +602,7 @@ Calculate1 = R6Class ('Calculate1',
                           private$Output$Mean = NA
                           private$Output$SD = NA
                           private$Output$Median = NA
+                          private$Output$CV = NA
                           private$Output$CV = NA
                           private$Output$M100 = NA
                           private$Output$J = NA
@@ -615,6 +621,9 @@ Calculate1 = R6Class ('Calculate1',
                         
                         afternoon = which(hour(df$DT) %in% afternoon_block)
                         private$df_afternoon = df[afternoon,]
+                        
+                        wake = c(morning, afternoon)
+                        private$df_wake = df[wake, ]
                       }
                       ),
                       private = list (
@@ -626,6 +635,7 @@ Calculate1 = R6Class ('Calculate1',
                         df_night = NULL,
                         df_morning = NULL,
                         df_afternoon = NULL,
+                        df_wake = NULL,
                         
                         calculateNoNAs = function (df = private$Measurement$filenas, name = "") {
                           norows = nrow(df)
@@ -641,7 +651,7 @@ Calculate1 = R6Class ('Calculate1',
                           private$NoDays = NoDays
                           #IMPORTANT: next line is setting the days to calculate
                           private$NoRecords = nrow (df)
-                          private$Output[1,1] = private$NoRecords
+                          private$Output[["Number of measurements"]] = private$NoRecords
                         },
     
                         calculateMean = function(df, name = "") {
@@ -1265,26 +1275,50 @@ Calculate1 = R6Class ('Calculate1',
                           Glucose = as.vector(df$Glucose)
                           GRADEs = 425 * ((log10(log10(Glucose/18)) + 0.16)^2)
                           GRADE = mean(GRADEs)
-                          name = paste0("GRADE", name)
-                          private$Output[[name]] = GRADE
+                          namea = paste0("GRADE", name)
+                          private$Output[[namea]] = GRADE
                           
                           #calculating GRADE hypoglycaemia percent
                           hypos = which(Glucose < 90)
                           HypoPercent = 100*sum(GRADEs[hypos])/sum(GRADEs)
-                          name = paste0("GRADE_hyp", name)
-                          private$Output[[name]] = HypoPercent
+                          namea = paste0("GRADE_hyp", name)
+                          private$Output[[namea]] = HypoPercent
                           
                           #calculating GRADE euglycaemia percent
                           eus = which (Glucose>=90 & Glucose<=140)
                           EuPercent = 100*sum(GRADEs[eus])/sum(GRADEs)
-                          name = paste0("GRADE_eu", name)
-                          private$Output[[name]] = EuPercent
+                          namea = paste0("GRADE_eu", name)
+                          private$Output[[namea]] = EuPercent
                           
                           #calculating GRADE hyperglycaemia percent
                           hypers = which(Glucose > 140)
                           HyperPercent = 100*sum(GRADEs[hypers])/sum(GRADEs)
-                          name = paste0("GRADE_hyper", name)
-                          private$Output[[name]] = HyperPercent
+                          namea = paste0("GRADE_hyper", name)
+                          private$Output[[namea]] = HyperPercent
+                        },
+                        
+                        calculateBGI = function (df, name = "") {
+                          Glucose = df$Glucose[!is.na(df$Glucose)]
+                          f_Glucose = 1.509 * ((log(Glucose) ^ 1.084) - 5.381)
+                          r_Glucose = 10 * (f_Glucose ^ 2)
+                          
+                          LBGI = mean(r_Glucose[f_Glucose > 0])
+                          HBGI = mean(r_Glucose[f_Glucose < 0])
+                          
+                          namea = paste0("LBGI", name)
+                          nameb = paste0("HBGI", name)
+                          
+                          private$Output[[namea]] = LBGI
+                          private$Output[[nameb]] = HBGI
+                        },
+                        
+                        calculateA1c = function (df, name = "") {
+                          Glucose = df$Glucose[!is.na(df$Glucose)]
+                          Glucose = Glucose / 18.02
+                          eA1c = (mean(Glucose) + 2.52)/1.583
+                          name = paste0("eA1c", name)
+                          private$Output[[name]] = eA1c
+                          
                         }
             
 ),

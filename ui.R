@@ -58,7 +58,7 @@ shinyUI (
                                  tags$li("format of the date: please specify the order of day, month, year as well as hours, minutes and optionally seconds. E.g.: mdy_hm for a format like this: 9/27/99 13:13; ymd_hms for a format like this: 17.10.21 13:41:59. The seperator can be: :, ., /"),
                                  tags$li("provide file extension of your files. Currently supported are: .csv, .xlsx, .xls"),
                                  tags$li("if your files are in a .csv format, please provide a character which fulfills the seperator role in your files"),
-                                 tags$li("files to analyze. You can choose as many files from you PC, by clicking the <Browse> button.")
+                                 tags$li("files to analyze. You can choose any files from you PC, by clicking the <Browse> button.")
                                )),
                        tags$p("To better illustrate what is what in a CGM file, following images of a raw CGM data file are marked with names of input fields."),
                        tags$div(img(src = "arg cols.jpg", width = 770, height = 306, align = "center", title = "Column numbers explained", Introduction = "Column numbers explained")),
@@ -80,6 +80,8 @@ shinyUI (
                           tags$li("mean"),
                           tags$li("standard deviation (SD)"),
                           tags$li("median, coefficient of variation (CV), M100 index"),
+                          tags$li("low/high blood glucose index"),
+                          tags$li("estimated HbA1c"),
                           tags$li("J-index"),
                           tags$li("mean amplitude of glycaemic excursion (MAGE)"),
                           tags$li("mean of daily differences (MODD)"),
