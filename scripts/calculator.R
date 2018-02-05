@@ -6,6 +6,7 @@ require (lubridate)
 require (stringr)
 require (ggplot2)
 require (fractal)
+require (MESS)
 
 fillGaps = function (vector) {
   v = vector
@@ -548,6 +549,7 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateCV(df = df)
                           private$calculateBGI(df = df)
                           private$calculateA1c(df = df)
+                          private$calculateAUC(df = df)
                           private$calculateM100(df = df)
                           private$calculateJ(df = df)
                           private$calculateMAGE(df = df)
@@ -592,6 +594,7 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateCV(df = df, name = name)
                           private$calculateBGI(df = df, name = name)
                           private$calculateA1c(df = df, name = name)
+                          private$calculateAUC(df = df, name = name)
                           private$calculateM100(df = df[!is.na(df$Glucose),], name = name)
                           private$calculateJ(df = df, name = name)
                           private$calculateHypo(df = df[!is.na(df$Glucose),], name = name)
@@ -1319,6 +1322,14 @@ Calculate1 = R6Class ('Calculate1',
                           name = paste0("eA1c", name)
                           private$Output[[name]] = eA1c
                           
+                        },
+                        
+                        calculateAUC = function (df, name = "", interval = private$Measurement$interval) {
+                          Glucose = df$Glucose[!is.na(df$Glucose)]
+                          x = seq(from = 0, length.out = length(Glucose), by = interval)
+                          AUC = MESS::auc(x = x, y = Glucose, type = "spline")
+                          name = paste0("AUC", name)
+                          private$Output[[name]] = AUC
                         }
             
 ),
