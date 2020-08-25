@@ -5,7 +5,6 @@ require (ttutils)
 require (lubridate)
 require (stringr)
 require (ggplot2)
-require (fractal)
 require (MESS)
 
 fillGaps = function (vector) {
@@ -562,6 +561,10 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateHypo(df = df)
                           private$calculateHyper(df = df)
                           private$calculateGRADE(df = df)
+                          private$calculatePregnancyHypo(df)
+                          private$calculatePregnancyHypoHypo(df)
+                          private$calculatePregnancyHyper(df)
+                          private$calculateTIR(df)
                           } else {
                           # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
                           private$Output$Mean = NA
@@ -600,6 +603,10 @@ Calculate1 = R6Class ('Calculate1',
                           private$calculateHypo(df = df[!is.na(df$Glucose),], name = name)
                           private$calculateHyper(df = df[!is.na(df$Glucose),], name = name)
                           private$calculateGRADE(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculatePregnancyHypo(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculatePregnancyHypoHypo(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculatePregnancyHyper(df = df[!is.na(df$Glucose),], name = name)
+                          private$calculateTIR(df = df[!is.na(df$Glucose),], name = name)
                         } else {
                           # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
                           private$Output$Mean = NA
@@ -701,7 +708,7 @@ Calculate1 = R6Class ('Calculate1',
                           
                           if(max(v) - min(v) <= private$ExcursionLimit) { 
                             private$Output$MAGE = "There are no excursion in the file." 
-                            return(NULL) 
+                            return(-1) 
                           }
 
                           #getting turning points and local minima maxima
@@ -754,7 +761,7 @@ Calculate1 = R6Class ('Calculate1',
                             name = paste0("MAGE", name)
                             private$Output[[name]] = MAGE
                           } else {
-                            private$Output$MAGE = "Unable to calculate MAGE. Visual analysis should be performed."
+                            private$Output$MAGE = -1
                           }
                         },
                         
@@ -846,38 +853,51 @@ Calculate1 = R6Class ('Calculate1',
                           private$Output[[name]] = CONGA
                         },
                         
-                        calculateHypo = function (df, name = "") {
+                        calculateHypo = function (df, name = "", threshold=70) {
                           Glucose = as.vector(df$Glucose)
-                          Percent = 100 * sum (Glucose < 70)/length (Glucose)
+                          Percent = 100 * sum (Glucose < threshold)/length (Glucose)
                           # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
                           name = paste0("Time spent below 70 mg/dl", name)
                           private$Output[[name]] = Percent
                         },
                         
-                        calculateHyper = function (df, name = "") {
+                        calculateHyper = function (df, name = "", threshold=180) {
                           Glucose = as.vector(df$Glucose)
-                          Percent = 100 * sum (Glucose > 180)/length (Glucose)
+                          Percent = 100 * sum (Glucose > threshold)/length (Glucose)
                           # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
                           name = paste0("Time spent over 180 mg/dl", name)
                           private$Output[[name]] = Percent
                         },
                         
-                        calculateSlope1 = function () {
+                        calculatePregnancyHypo = function(df, name="", threshold=63) {
                           Glucose = as.vector(df$Glucose)
-                          alpha1 = DFA(Glucose, scale.min = 2, scale.max = private$Measurement$perday/12)[[1]]
-                          private$Output$Alpha1_DFA = alpha1
+                          Percent = 100 * sum (Glucose < threshold)/length (Glucose)
+                          # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                          name = paste0("Time below 63 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateSlope2 = function() {
-                          Glucose = as.vector (df$Glucose)
-                          alpha2 = DFA(Glucose, scale.min = private$Measurement$perday/12, scale.max = private$Measurement$perday/4)[[1]]
-                          private$Output$Alpha2_DFA = alpha2
+                        # calculatePregnancyHyper = function(df, name="", threshold=140) {
+                        #   Glucose = as.vector(df$Glucose)
+                        #   Percent = 100 * sum (Glucose > threshold)/length (Glucose)
+                        #   # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                        #   name = paste0("Time spent over 140 mg/dl", name)
+                        #   private$Output[[name]] = Percent
+                        # },
+                        
+                        calculatePregnancyHypoHypo = function(df, name="", threshold=54) {
+                          Glucose = as.vector(df$Glucose)
+                          Percent = 100 * sum (Glucose < threshold)/length (Glucose)
+                          # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                          name = paste0("Time below 54 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateSlope3 = function() {
-                          Glucose = as.vector (df$Glucose)
-                          alpha3 = DFA(Glucose, scale.min = private$Measurement$perday/4, scale.max = private$Measurement$perday)[[1]]
-                          private$Output$Alpha3_DFA = alpha3
+                        calculateTIR = function(df, name="", lower=70, upper=140) {
+                          Glucose = as.vector(df$Glucose)
+                          Percent = 100 * sum(Glucose > lower & Glucose < upper) / length(Glucose)
+                          name = paste0("Time in range(70-140)", name)
+                          private$Output[[name]] = Percent
                         },
                         
                         moving9PF = function (v) {
@@ -1327,9 +1347,15 @@ Calculate1 = R6Class ('Calculate1',
                         calculateAUC = function (df, name = "", interval = private$Measurement$interval) {
                           Glucose = df$Glucose[!is.na(df$Glucose)]
                           x = seq(from = 0, length.out = length(Glucose), by = interval)
-                          AUC = MESS::auc(x = x, y = Glucose, type = "spline")
+                          res = tryCatch(MESS::auc(x = x, y = Glucose, type = "spline"),
+                                         warning = function(e) {
+                                           MESS::auc(x = x, y = Glucose, type = "spline")
+                                           },
+                                         error= function(e) {
+                                           -1
+                                         })
                           name = paste0("AUC", name)
-                          private$Output[[name]] = AUC
+                          private$Output[[name]] = res
                         }
             
 ),
