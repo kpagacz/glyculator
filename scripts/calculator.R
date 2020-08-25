@@ -1,21 +1,11 @@
-if (!require("R6")) { install.packages("R6")}
 require (R6)
-if (!require("xlsx")) { install.packages("xlsx")}
 require (xlsx)
-if (!require("dplyr")) { install.packages("dplyr")}
 require (dplyr)
-if (!require("ttutils")) { install.packages("ttutils")}
 require (ttutils)
-if (!require("lubridate")) { install.packages("lubridate")}
 require (lubridate)
-if (!require("stringr")) { install.packages("stringr")}
 require (stringr)
-if (!require("ggplot2")) { install.packages("ggplot2")}
 require (ggplot2)
-if (!require("MESS")) { install.packages("MESS")}
-require(MESS)
-if (!require("data.table")) { install.packages("data.table")}
-require(data.table)
+require (MESS)
 
 fillGaps = function (vector) {
   v = vector
@@ -55,47 +45,32 @@ Measurement = R6Class ('Measurement',
                          dtformat = '',
                          max.days = F,
                          days = 2,
-                         state = T,
                          
                          initialize = function (file, perday = 288, dtformat, max.days) {
                            
                            private$getID(file)
                            self$dtformat = dtformat
-                           self$file = (private$prepareDf(file, dtformat = self$dtformat))
-                           
-                           self$state = T
+                           self$file = suppressWarnings(private$prepareDf(file, dtformat = self$dtformat))
                            self$perday = perday
                            self$interval = 1440/perday
                            self$max.days = max.days
                            validation = private$validate()
                            # if (validation==FALSE) cat('Your input is incorrect. Check whether the number of measurements per day is correct. Only 288 or 96 are being accepted.\n')
-                           tryCatch({
                            self$makePretty()
-                           },
-                           error = function (error) {
-                             self$state = F
-                             print(paste0('Error in makePretty:', error))
-                           }
-                           )
-                           if (is.na(self$id)) {
-                             self$id = paste0(date(), runif(1,1,10))
-                           }
-                           
                          },
                          
                          makePretty = function () {
                            self$file$Glucose = private$fillGaps(self$file$Glucose)
                            suppressWarnings(private$cutDup())
-                           
                            suppressWarnings(private$cutTTTTTT())
                            suppressWarnings(private$cutTTTT())
                            suppressWarnings(private$cutTT())
                            self$filenas = self$file
                            private$cutNAs()
                            
-                           #if (suppressWarnings(self$areBreaks()) == TRUE) suppressWarnings(private$cutBreaks())
-                           #if (self$areNAs() == TRUE) #cat ('NAs w wynikach glikemii w pliku', self$id, '.xls. Opracuj plik recznie.\n')
-                           #private$appendIndex()
+                           if (suppressWarnings(self$areBreaks()) == TRUE) suppressWarnings(private$cutBreaks())
+                           if (self$areNAs() == TRUE) #cat ('NAs w wynikach glikemii w pliku', self$id, '.xls. Opracuj plik recznie.\n')
+                             private$appendIndex()
                            rownames(self$file) = NULL
                            rownames(self$filenas) = NULL
                          },
@@ -160,9 +135,6 @@ Measurement = R6Class ('Measurement',
                            FileName = gsub(" ", "", self$id)
                            FileName = gsub("\\?", "_", FileName)
                            write.xlsx (output, file = paste(dir, '/', FileName, '.xls', sep =''), showNA=FALSE, row.names=FALSE)
-                         },
-                         getState = function() {
-                           return(private$state)
                          }
                        ),
                        private = list (
@@ -172,17 +144,13 @@ Measurement = R6Class ('Measurement',
                          },
                          
                          prepareDf = function(df, dtformat) {
-                           
-                           df = data.frame(Glucose = df$Glucose, DT = df$DT)
-                           if (class(df$Glucose) == "factor") {
-                           intgluc = as.numeric(levels(df$Glucose))[df$Glucose]
+                           df = data.frame(df$Glucose, df$DT)
+                           dfGlucose = df[[1]]
+                           intgluc = as.numeric(levels(dfGlucose))[dfGlucose]
                            df$Glucose = intgluc
-                           }
-                           #  Remove '0's from Glucose columns. Apparently sometimes there are zeros among glucose values o.O
-                           df$Glucose[which(df$Glucose==0)] = NA
-                           df$df.DT = do.call(dtformat, list(df$DT))
-                           df = data.frame(DT = df$df.DT, Glucose = df$Glucose)
-                           
+                           df$df.DT = do.call(dtformat, list(df$df.DT))
+                           df = data.frame(df$df.DT, df$Glucose)
+                           colnames(df) = c('DT', 'Glucose')
                            return (df)
                          },
                          
@@ -205,8 +173,8 @@ Measurement = R6Class ('Measurement',
                            datediff = abs(difftime(datelagged, self$file$DT, units = 'secs'))
                            datediff = datediff[-length(datediff)]
                            dup = datediff == 0 | datediff == 1
-                           dup[1] = FALSE
-                           dupint = which(dup==TRUE)
+                           dupint = seq.int(length=length(dup))
+                           dupint = dupint[dup]
                            if(length(dupint) > 0) self$file = self$file[-dupint,]
                          },
                          
@@ -222,9 +190,8 @@ Measurement = R6Class ('Measurement',
                            n2 = length(logical2)
                            candidate2 = seq.int(length = n2-m2+1)
                            for (i in seq.int(length=m2)) {
-                             candidate2 = candidate2[patrn2[i] == logical2[candidate2 + i - 1]]
+                             candidate2 = candidate2[patrn2[i] == logical2[candidate2 + i -1]]
                            }
-                           candidate2 = candidate2[!is.na(candidate2)]
                            if (length(candidate2) > 0) self$file = self$file[-candidate2,]
                          },
                          
@@ -243,7 +210,6 @@ Measurement = R6Class ('Measurement',
                            for (i in seq.int(length=m2)) {
                              candidate2 = candidate2[patrn2[i] == logical2[candidate2 + i -1]]
                            }
-                           candidate2 = candidate2[!is.na(candidate2)]
                            if (length(candidate2) > 0) self$file = self$file[-candidate2,]
                          },
                          
@@ -262,7 +228,6 @@ Measurement = R6Class ('Measurement',
                            for (i in seq.int(length=m3)) {
                              candidate3 = candidate3[patrn3[i] == logical3[candidate3 + i -1]]
                            }
-                           candidate3 = candidate3[!is.na(candidate3)]
                            if (length(candidate3) > 0) self$file = self$file[-candidate3,]
                          },
                          
@@ -334,7 +299,7 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                
                                
                                
-                               initialize = function (files.list = NULL, dir = getwd(), max.days = T, perday = 288, idrow = 3, idcol = 2, headnrows = 13, datecol = 2, timecol = 3, dtcol = NaN, glucosecol = 10, separator = ',', extension = '.csv', dtformat = 'dmy_hms') {
+                               initialize = function (files.list = NULL, dir = getwd(), max.days = T, perday = 288, idrow = 3, idcol = 2, headnrows = 13, datecol = 2, timecol = 3, dtcol = 4, glucosecol = 10, separator = ',', extension = '.csv', dtformat = 'dmy_hms') {
                                  #self$removeMeasurementsWithNAs()
                                  
                                  self$files.list = files.list
@@ -353,8 +318,8 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                  
                                  if (is.null(self$files.list)) self$loadFromDir(dir, perday = self$perday, dtformat = self$dtformat, max.days = self$max.days) else 
                                    self$loadFromFiles (files.list = self$files.list, perday = self$perday, dtformat = self$dtformat, max.days = self$max.days)
-                                 #self$removeShortMeasurements()
-                                 #self$removeMeasurementsWithBreaks()
+                                 self$removeShortMeasurements()
+                                 self$removeMeasurementsWithBreaks()
                                  if (self$max.days == F) self$limitMeasurementsToMaxDays()
                                },
                                
@@ -368,31 +333,31 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                
                                loadFromFiles = function (files.list = self$files.list, perday, dtformat, max.days) {
                                  private$beforetrim = private$readCSVs (FileNames = files.list)
-                                 private$headers = private$readHeaders(FileNames = files.list)
                                  # cat ('Done loading.\n')
                                  private$aftertrim = private$trimAll ()
                                  # cat('Done trimming.\n')
-
-                                 
-                                 listofobjects = lapply (private$aftertrim, function (x) {
-                                   NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
-                                   return (NewMeasure)
-                                   
-                                 })
-                                 private$lob2 = listofobjects
-                               },
-                               
-                               loadFromDir = function (dir = getwd(), perday, dtformat, max.days) {
-                                 private$beforetrim = private$readCSVs (dir = dir)
-                                 private$headers = private$readHeaders (dir = dir)
-                                 private$aftertrim = private$trimAll()
-
                                  
                                  listofobjects = lapply (private$aftertrim, function (x) {
                                    NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
                                    return (NewMeasure)
                                  } 
                                  )
+                                 
+                                 private$lob2 = listofobjects
+                               },
+                               
+                               loadFromDir = function (dir = getwd(), perday, dtformat, max.days) {
+                                 private$beforetrim = private$readCSVs (dir = dir)
+                                 # cat ('Done loading.\n')
+                                 private$aftertrim = private$trimAll ()
+                                 # cat('Done trimming.\n')
+                                 
+                                 listofobjects = lapply (private$aftertrim, function (x) {
+                                   NewMeasure = Measurement$new(x,perday,dtformat = dtformat,max.days = max.days)
+                                   return (NewMeasure)
+                                 } 
+                                 )
+                                 
                                  private$lob2 = listofobjects
                                },
                                
@@ -431,16 +396,12 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                getResults = function () {
                                  Results = structure(list(), class = "data.frame")
                                  for (i in seq.int(length.out = length(self$get_lob()))) {
-                                   tryCatch({
                                    res = Calculate1$new(self$get_lob()[[i]])$getOutput()
                                    Results = rbind (Results, res)
-                                   }, error = function (error) {
-                                     print(paste0("Error in calc or rbind. No of iteration:", i, " ", error))
-                                   }
-                                   )
                                  }
                                  # write.xlsx (Results, 'Results.xlsx', showNA = F)
-                                 Results = format(Results, nsmall = 2)
+                                 # print(c("Results saved to Results.xlsx"))
+                                 Results = format(round(Results, 2), nsmall = 2)
                                  return (Results)
                                  
                                },
@@ -507,92 +468,30 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                lob2 = NA,
                                beforetrim = NA,
                                aftertrim = NA,
-                               headers = NA,
                                
                                readCSVs = function (FileNames = NULL, dir = getwd(), ext = self$extension, separator = self$separator, skipnum = self$headnrows) {
                                  if (is.null(FileNames)) FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
                                  if (ext == '.xlsx' || ext == '.xls') {
-                                   ListOfDfs = lapply (FileNames, read.xlsx, sheetIndex = 1, header = FALSE, stringsAsFactors = F, startRow = skipnum)
+                                   ListOfDfs = lapply (FileNames, read.xlsx, sheetIndex = 1, header = FALSE, stringsAsFactors = F)
                                  } else {
-                                   ListOfDfs = lapply (FileNames, fread, header = FALSE, skip = skipnum)
-                                   
+                                   ListOfDfs = lapply (FileNames, read.csv, sep = separator, header = FALSE, encoding = "UTF-16", stringsAsFactors = F)
+                                   return (ListOfDfs)
                                  }
-                                 return (ListOfDfs)
                                },
                                
-                               readHeaders = function (FileNames = NULL, dir = getwd(), ext = self$extension, separator = self$separator, skipnum = self$headnrows) {
-                                 if (is.null(FileNames)) FileNames = list.files (dir, pattern = paste('*', ext, sep = ''), full.names = TRUE)
-                                 if (ext == '.xlsx' || ext == '.xls') {
-                                   ListOfDfs = lapply (FileNames, function(x) {
-                                     'inside readheaders lapply'
-                                     data = read.xlsx(x, sheetIndex = 1, header = FALSE, endRow = skipnum, stringsAsFactors = F)
-                                               })
-                                 } else {
-                                   ListOfDfs = lapply (FileNames, fread, header = FALSE, nrows = skipnum)
-                                   
-                                 }
-                                 return (ListOfDfs)
-                               },
-                               
-                               trimDf = function (df, header, dtcol = self$dtcol, datecol = self$datecol, timecol = self$timecol, glucosecol = self$glucosecol) {
+                               trimDf = function (df, dtcol = self$dtcol, datecol = self$datecol, timecol = self$timecol, glucosecol = self$glucosecol) {
+                                 id = as.character(df[self$idrow[[1]], self$idcol[[1]]])
                                  
-                                 #id = as.character(df[self$idrow[[1]], self$idcol[[1]]])
-                                 df = as.data.frame(df)
-                                 if (self$extension == ".xlsx" || self$extension == ".xls") {
-                                   #  Importing from excel disturbs my column numbering, so there is a need to
-                                   #  reassign columns and numbers. Very irritating, but what can you do.
-                                   #  Would definately like another solution, but this one is at least very explicit
-                                   working_df = df
-                                   if(is.na(dtcol)) {
-                                     working_df[,1] = df[,paste0("X", as.character(glucosecol))]
-                                     working_df[,2] = df[,paste0("X", as.character(datecol))]
-                                     working_df[,3] = df[,paste0("X", as.character(timecol))]
-                                     glucosecol = 1
-                                     datecol = 2
-                                     timecol = 3
-                                   } else {
-                                     working_df[,1] = df[,paste0("X", as.character(glucosecol))]
-                                     working_df[,2] = df[,paste0("X", as.character(dtcol))]
-                                     glucosecol = 1
-                                     dtcol = 2
-                                   }
-                                   df = working_df
-                                 }
-                                 
-                                 if (!is.na(dtcol) && class(df[1,dtcol])[1] == "POSIXct") {
-                                   self$dtformat = "ymd_hms"
-                                 }
-                                 
-                                 if (class(df[1,timecol])[1] == "POSIXct") {
-                                   if(class(df[1,datecol]) == 'Date') {
-                                     self$dtformat = 'ymd_hms'
-                                   }
-                                   
-                                   times = vector(mode = 'character')
-                                   for (row in df[timecol]) {
-                                     time = paste0(lubridate::hour(row),':',lubridate::minute(row), ':', lubridate::second(row))
-                                     times = append(times, time)
-                                   }
-                                   df[timecol] = times
-                                   
-                                 }
-                                 
-                                 
-                                 
-                                 id = as.character(header[self$idrow[[1]], self$idcol[[1]]])
                                  if(is.na(dtcol)) {
                                    dtcol = ncol(df)+1
                                    df = private$joinDateAndTime(df, datecol = datecol, timecol = timecol, dtcol = dtcol)
                                  }
-                                 
                                  NewDf = df[self$headnrows:nrow(df),]
                                  NewDf = NewDf[,c(dtcol,glucosecol)]
-                                 norows = nrow(NewDf)
-                                 
+                                 norows = nrow(NewDf)-10
                                  NewDf = NewDf[1:norows,]
                                  rownames (NewDf) = NULL
                                  NewDf[1,3] = id
-                                 
                                  colnames(NewDf) = c('DT', 'Glucose')
                                  return (NewDf)
                                },
@@ -602,19 +501,8 @@ ListOfMeasurments = R6Class ('ListOfMeasurments',
                                  return (df)
                                },
                                
-                               trimAll = function (file = private$beforetrim, header = private$headers) {
-                                 # aftertrim = lapply (file, private$trimDf)
-                                 aftertrim = vector("list", length(file))
-                                 for(i in 1:length(file)) {
-                                   tryCatch({
-                                   res = private$trimDf(file[[i]], header[[i]])
-                                   aftertrim[[i]] = res
-                                   
-                                   }, error = function(error) {
-                                     print(paste0('Error in TrimAll:', error))
-                                   }
-                                   )
-                                 }
+                               trimAll = function (file = private$beforetrim) {
+                                 aftertrim = lapply (file, private$trimDf)
                                  return (aftertrim)
                                }
                                
@@ -630,6 +518,8 @@ Calculate1 = R6Class ('Calculate1',
                         
                         initialize = function (Meas) {
                           private$Measurement = Meas
+                          rownames(private$Output) = Meas$id
+                          colnames(private$Output) = 'Average tests per day'
                         },
                         
                         getMeasurement = function () {
@@ -637,50 +527,16 @@ Calculate1 = R6Class ('Calculate1',
                         },
                         
                         getOutput = function() {
-                          # tryCatch ({
-                            rownames(private$Output) = private$Measurement$id
-                            colnames(private$Output) = 'Complete records[%]'
-                            self$find_blocks()
-                            private$cutTailingNAs()
-                            private$calculateNoNAs()
-                            self$calculateWithNas(name = "_whole")
-                            self$calculateEverythingPoorVersion(name = '_whole')
-                            self$calculateWithNas(df = private$df_night, name = "_night")
-                            self$calculateWithNas(df = private$df_wake, name = "_wake")
-                            # self$calculateWithNas(df = private$df_morning, name = "_morning")
-                            # self$calculateWithNas(df = private$df_afternoon, name = "_afternoon")
-                            # self$calculateEverything()
-                            private$Output$Errors = 'None'
-                            return (as.data.frame(private$Output)) 
-                          # }, error = function (error) {
-                          #   print(paste0("getOutput error, id:", private$Measurement$id, " ", error))
-                          #   private$Output$Errors = paste("Error encountered during calculations. Error:", error)
-                          #   return (as.data.frame(private$Output))
-                          # }
-                          # )
-                            
-                          },
-                        
-                        calculateEverythingPoorVersion = function (df = private$Measurement$file, name = "") {
-                          private$calculateNoDaysAndNoRecords(df = df)
-                          if (private$NoDays >= 2) {
-                            private$calculateMAGE(df = df, name = name)
-                            private$calculateMODD(df = df, name = name)
-                            private$calculateCONGA1h(df = df, name = name)
-                            private$calculateCONGA2h(df = df, name = name)
-                            private$calculateCONGA3h(df = df, name = name)
-                            private$calculateCONGA4h(df = df, name = name)
-                            private$calculateCONGA6h(df = df, name = name)
-                          } else {
-                            private$Output$MAGE = NA
-                            private$Output$MODD = NA
-                            private$Output$CONGA1h = NA
-                            private$Output$CONGA2h = NA
-                            private$Output$CONGA3h = NA
-                            private$Output$CONGA4h = NA
-                            private$Output$CONGA6h = NA
-                          }
+                          self$find_blocks()
+                          private$calculateNoNAs()
+                          self$calculateWithNas(name = "_whole")
+                          self$calculateWithNas(df = private$df_night, name = "_night")
+                          self$calculateWithNas(df = private$df_wake, name = "_wake")
+                          # self$calculateWithNas(df = private$df_morning, name = "_morning")
+                          # self$calculateWithNas(df = private$df_afternoon, name = "_afternoon")
+                          self$calculateEverything()
                           
+                          return (as.data.frame(private$Output))
                         },
                         
                         calculateEverything = function (df = private$Measurement$file) {
@@ -705,6 +561,10 @@ Calculate1 = R6Class ('Calculate1',
                             private$calculateHypo(df = df)
                             private$calculateHyper(df = df)
                             private$calculateGRADE(df = df)
+                            private$calculatePregnancyHypo(df)
+                            private$calculatePregnancyHypoHypo(df)
+                            private$calculatePregnancyHyper(df)
+                            private$calculateTIR(df)
                           } else {
                             # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
                             private$Output$Mean = NA
@@ -731,8 +591,6 @@ Calculate1 = R6Class ('Calculate1',
                         
                         calculateWithNas = function (df = private$Measurement$filenas, name) {
                           if (T) {
-                            dataframe = df
-                            nonas = dataframe[!is.na(dataframe$Glucose),]
                             private$calculateMean(df = df, name = name)
                             private$calculateMedian(df = df, name = name)
                             private$calculateSD(df = df, name = name)
@@ -740,12 +598,15 @@ Calculate1 = R6Class ('Calculate1',
                             private$calculateBGI(df = df, name = name)
                             private$calculateA1c(df = df, name = name)
                             private$calculateAUC(df = df, name = name)
-                            private$calculateM100(df = nonas, name = name)
+                            private$calculateM100(df = df[!is.na(df$Glucose),], name = name)
                             private$calculateJ(df = df, name = name)
-                            private$calculateHypo(df = nonas, name = name)
-                            private$calculateHyper(df = nonas, name = name)
-                            private$calculateGRADE(df = nonas, name = name)
-                            private$calculateHypoEvents(df = nonas, name = name)
+                            private$calculateHypo(df = df[!is.na(df$Glucose),], name = name)
+                            private$calculateHyper(df = df[!is.na(df$Glucose),], name = name)
+                            private$calculateGRADE(df = df[!is.na(df$Glucose),], name = name)
+                            private$calculatePregnancyHypo(df = df[!is.na(df$Glucose),], name = name)
+                            private$calculatePregnancyHypoHypo(df = df[!is.na(df$Glucose),], name = name)
+                            private$calculatePregnancyHyper(df = df[!is.na(df$Glucose),], name = name)
+                            private$calculateTIR(df = df[!is.na(df$Glucose),], name = name)
                           } else {
                             # cat ("Insufficient number of measurement time points (needed at least 576) to calculate parameters in file", private$Measurement$id,".\n", sep = ' ')
                             private$Output$Mean = NA
@@ -786,19 +647,12 @@ Calculate1 = R6Class ('Calculate1',
                         df_afternoon = NULL,
                         df_wake = NULL,
                         
-                        cutTailingNAs = function (df = private$Measurement$filenas) {
-                          df_old = df
-                          index_last_value = max(which(!is.na(df_old$Glucose)))
-                          df_new = df_old[1:index_last_value,]
-                          private$Measurement$filenas = df_new
-                        },
-                        
                         calculateNoNAs = function (df = private$Measurement$filenas, name = "") {
                           norows = nrow(df)
                           noNAs = sum(is.na(df$Glucose))
                           percent = 100 * (norows - noNAs) / norows
                           
-                          name = paste0("Complete records", name, "[%]")
+                          name = paste0("Average tests per day", name)
                           private$Output[[name]] = percent
                         },
                         
@@ -807,7 +661,7 @@ Calculate1 = R6Class ('Calculate1',
                           private$NoDays = NoDays
                           #IMPORTANT: next line is setting the days to calculate
                           private$NoRecords = nrow (df)
-                          # private$Output[["Number of measurements"]] = private$NoRecords
+                          private$Output[["Number of measurements"]] = private$NoRecords
                         },
                         
                         calculateMean = function(df, name = "") {
@@ -851,10 +705,10 @@ Calculate1 = R6Class ('Calculate1',
                         
                         calculateMAGE = function(df, name = "") {
                           v = df$Glucose
-                          name = paste0("MAGE", name)
+                          
                           if(max(v) - min(v) <= private$ExcursionLimit) { 
-                            private$Output[[name]] = "There are no excursion in the file." 
-                            return(NULL) 
+                            private$Output$MAGE = "There are no excursion in the file." 
+                            return(-1) 
                           }
                           
                           #getting turning points and local minima maxima
@@ -865,6 +719,7 @@ Calculate1 = R6Class ('Calculate1',
                           localminmax = private$identifyLocalMinMax(v, mins = mins, maxs = maxs)
                           lmins = localminmax[[1]]
                           lmaxs = localminmax[[2]]
+                          #print(private$ExcursionLimit)
                           
                           #deleting turning points with uncountable excursions on both sides
                           for (i in 1:5) {
@@ -891,19 +746,22 @@ Calculate1 = R6Class ('Calculate1',
                             }
                           }
                           
+                          #print(smoothed[sort.int(c(mins,maxs))])
                           #removing uncountable excursions at the beginning or end
                           output = private$removeUncountableExcFromBegAndEnd(smoothed = smoothed, mins = mins, maxs = maxs)
                           mins = output[[1]]
                           maxs = output[[2]]
+                          #print(smoothed[sort.int(c(mins,maxs))])
                           
                           logic = private$areUncountableExcursions(smoothed = smoothed, mins = mins, maxs = maxs)
+                          #print(logic)
                           
                           if(logic == FALSE) {
                             MAGE = private$calculateAmplitudes(vector = v, mins = mins, maxs = maxs)
-                            
+                            name = paste0("MAGE", name)
                             private$Output[[name]] = MAGE
                           } else {
-                            private$Output[[name]] = "Unable to calculate MAGE. Visual analysis should be performed."
+                            private$Output$MAGE = -1
                           }
                         },
                         
@@ -913,6 +771,8 @@ Calculate1 = R6Class ('Calculate1',
                           for (i in seq.int (length.out = length(v)/2)){
                             DayIntervalDiff = append(DayIntervalDiff, abs(v[i] - v[i+private$Measurement$perday]))
                           }
+                          #printing DayIntervalDiff
+                          #cat(DayIntervalDiff)
                           MODD = mean (DayIntervalDiff)
                           name = paste0("MODD", name)
                           private$Output[[name]] = MODD
@@ -993,59 +853,51 @@ Calculate1 = R6Class ('Calculate1',
                           private$Output[[name]] = CONGA
                         },
                         
-                        calculateHypo = function (df, name = "") {
+                        calculateHypo = function (df, name = "", threshold=70) {
                           Glucose = as.vector(df$Glucose)
-                          Percent = 100 * sum (Glucose < 70)/length (Glucose)
+                          Percent = 100 * sum (Glucose < threshold)/length (Glucose)
                           # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
-                          nameHypo = paste0("Time spent below 70 mg/dl", name, "[%]")
-                          private$Output[[nameHypo]] = Percent
-                          
-                          below54 = 100* sum(Glucose < 54)/length(Glucose)
-                          nameBelow54 = paste0("Time spend below 54 mg/dl", name, "[%]")
-                          private$Output[[nameBelow54]] = below54
+                          name = paste0("Time spent below 70 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateHyper = function (df, name = "") {
+                        calculateHyper = function (df, name = "", threshold=180) {
                           Glucose = as.vector(df$Glucose)
-                          Percent = 100 * sum (Glucose > 180)/length (Glucose)
+                          Percent = 100 * sum (Glucose > threshold)/length (Glucose)
                           # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
-                          nameHyper = paste0("Time spent over 180 mg/dl", name, "[%]")
-                          private$Output[[nameHyper]] = Percent
-                          
-                          over140 = 100 * sum(Glucose>140)/length(Glucose)
-                          nameOver140 = paste0("Time spent over 140 mg/dl", name, "[%]")
-                          private$Output[[nameOver140]] = over140
-                          
-                          over250 = 100 * sum(Glucose>250)/length(Glucose)
-                          nameOver250 = paste0("Time spent over 250 mg/dl", name, "[%]")
-                          private$Output[[nameOver250]] = over250
-                          
-                          primaryRange = 100*sum(Glucose>=70 & Glucose<=180)/length(Glucose)
-                          secondaryRange = 100*sum(Glucose>=70 & Glucose <=140)/length(Glucose)
-                          
-                          namePrimaryRange = paste0("Time in range 70-180mg/dl", name, "[%]")
-                          nameSecondaryRange = paste0("Time in range 70-140mg/dl", name, "[%]")
-                          
-                          private$Output[[namePrimaryRange]] = primaryRange
-                          private$Output[[nameSecondaryRange]] = secondaryRange
+                          name = paste0("Time spent over 180 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateSlope1 = function () {
+                        calculatePregnancyHypo = function(df, name="", threshold=63) {
                           Glucose = as.vector(df$Glucose)
-                          alpha1 = DFA(Glucose, scale.min = 2, scale.max = private$Measurement$perday/12)[[1]]
-                          private$Output$Alpha1_DFA = alpha1
+                          Percent = 100 * sum (Glucose < threshold)/length (Glucose)
+                          # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                          name = paste0("Time below 63 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateSlope2 = function() {
-                          Glucose = as.vector (df$Glucose)
-                          alpha2 = DFA(Glucose, scale.min = private$Measurement$perday/12, scale.max = private$Measurement$perday/4)[[1]]
-                          private$Output$Alpha2_DFA = alpha2
+                        # calculatePregnancyHyper = function(df, name="", threshold=140) {
+                        #   Glucose = as.vector(df$Glucose)
+                        #   Percent = 100 * sum (Glucose > threshold)/length (Glucose)
+                        #   # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                        #   name = paste0("Time spent over 140 mg/dl", name)
+                        #   private$Output[[name]] = Percent
+                        # },
+                        
+                        calculatePregnancyHypoHypo = function(df, name="", threshold=54) {
+                          Glucose = as.vector(df$Glucose)
+                          Percent = 100 * sum (Glucose < threshold)/length (Glucose)
+                          # PrettyPercent = format (Percent, nsmall = 2, digits = 2, width = 4)
+                          name = paste0("Time below 54 mg/dl", name)
+                          private$Output[[name]] = Percent
                         },
                         
-                        calculateSlope3 = function() {
-                          Glucose = as.vector (df$Glucose)
-                          alpha3 = DFA(Glucose, scale.min = private$Measurement$perday/4, scale.max = private$Measurement$perday)[[1]]
-                          private$Output$Alpha3_DFA = alpha3
+                        calculateTIR = function(df, name="", lower=70, upper=140) {
+                          Glucose = as.vector(df$Glucose)
+                          Percent = 100 * sum(Glucose > lower & Glucose < upper) / length(Glucose)
+                          name = paste0("Time in range(70-140)", name)
+                          private$Output[[name]] = Percent
                         },
                         
                         moving9PF = function (v) {
@@ -1092,6 +944,8 @@ Calculate1 = R6Class ('Calculate1',
                           LocalMaxs = numeric()
                           mins = mins
                           maxs = maxs
+                          #print(mins)
+                          #print(maxs)
                           
                           for (i in seq.int(length.out = length(maxs)-1)) {
                             LocalMins = append(LocalMins, which.min(v[maxs[i]:maxs[i+1]])+maxs[i]-1)
@@ -1120,15 +974,22 @@ Calculate1 = R6Class ('Calculate1',
                             LowInd = min(mins[i], maxs[i]) 
                             LowIndDownExc = abs(smoothed[LowInd] - smoothed[max(maxs[i-1], mins[i-1])])
                             LowIndUpExc = abs(smoothed[mins[i]] - smoothed[maxs[i]])
+                            #print (LowIndUpExc)
+                            #print(LowIndDownExc)
+                            #print(c("low ind Both side excursions",LowInd, LowIndDownExc < limit && LowIndUpExc < limit))
                             if(LowIndDownExc < limit && LowIndUpExc < limit) {
                               #finding out whether LowInd is a min
+                              #print (c('lowind == mins[i]', LowInd == mins[i]))
                               if (LowInd == mins[i]) {
                                 #finding adjacent local minima
-                                lower = Position(function(x) {x < LowInd}, x = lmins, nomatch = F, right = T)
-                                upper = Position(function(x) {x > LowInd}, x = lmins, nomatch = F, right = F)
+                                lower = Position(f = function(x) {x < LowInd}, x = lmins, nomatch = F, right = T)
+                                upper = Position(f = function(x) {x > LowInd}, x = lmins, nomatch = F, right = F)
+                                #print(c('lower upper', lower, upper))
                                 #checking whether position is out of bounds
+                                #print (c("not out of bounds", lower != F && upper != F))
                                 if (lower != F && upper != F) {
                                   #checking whether the minima are higher than the mins[i]
+                                  #print (c('are adjacent minima higher',original[lower] > smoothed[LowInd] && original[upper] > smoothed[LowInd]))
                                   if (original[lmins[lower]] > smoothed[LowInd] && original[lmins[upper]] > smoothed[LowInd]) {
                                     
                                   } else {
@@ -1156,15 +1017,22 @@ Calculate1 = R6Class ('Calculate1',
                             HighInd = max(mins[i], maxs[i]) 
                             HighIndUpExc = abs(smoothed[HighInd] - smoothed[min(maxs[i+1], mins[i+1], na.rm = T)])
                             HighIndDownExc = abs(smoothed[mins[i]] - smoothed[maxs[i]])
+                            #print (HighIndUpExc)
+                            #print(HighIndDownExc)
+                            #print(c("high ind Both side excursions",HighInd, HighIndDownExc < limit && HighIndUpExc < limit))
                             if(HighIndDownExc < limit && HighIndUpExc < limit) {
                               #finding out whether LowInd is a min
+                              #print (c('highind == mins[i]', HighInd == mins[i]))
                               if (HighInd == mins[i]) {
                                 #finding adjacent local minima
                                 lower = Position(f = function(x) {x < HighInd}, x = lmins, nomatch = F, right = T)
                                 upper = Position(f = function(x) {x > HighInd}, x = lmins, nomatch = F, right = F)
+                                #print(c('lower upper', lower, upper))
                                 #checking whether position is out of bounds
+                                #print (c("not out of bounds", lower != F && upper != F))
                                 if (lower != F && upper != F) {
                                   #checking whether the minima are higher than the mins[i]
+                                  #print (c('are adjacent minima higher',original[lower] > smoothed[HighInd] && original[upper] > smoothed[HighInd]))
                                   if (original[lmins[lower]] > smoothed[HighInd] && original[lmins[upper]] > smoothed[HighInd]) {
                                     
                                   } else {
@@ -1247,6 +1115,7 @@ Calculate1 = R6Class ('Calculate1',
                                 upper = Position(f = function(x) {x > LowInd}, x = lmins, nomatch = F, right = F)
                                 if (lower != F && upper != F) {
                                   #checking whether the minima are higher than the mins[i]
+                                  #print (c(original[lmins[lower]], smoothed[LowInd], original[lmins[upper]], smoothed[LowInd]))
                                   if (original[lmins[lower]] > smoothed[LowInd] && original[lmins[upper]] > smoothed[LowInd]) {
                                     
                                   } else {
@@ -1275,6 +1144,7 @@ Calculate1 = R6Class ('Calculate1',
                                   }
                                 } else {
                                   #contingency for border cases
+                                  #print (c(original[lmaxs[upper]], smoothed[HighInd]))
                                   if (i == 2 && original[lmaxs[upper]] < smoothed[HighInd]) {
                                     
                                   } else {
@@ -1316,8 +1186,10 @@ Calculate1 = R6Class ('Calculate1',
                                 #HighInd is a max
                                 lower = Position(f = function(x) {x < HighInd}, x = lmaxs, nomatch = F, right = T)
                                 upper = Position(f = function(x) {x > HighInd}, x = lmaxs, nomatch = F)
+                                #print (c('lower uppper', lower, upper,'checking if upper and lower exist',lower != F && upper != F))
                                 if (lower != F && upper != F) {
                                   #checking whether the maxima are lower than the maxs[i]
+                                  #print(c(original[lmaxs[lower]] < smoothed[HighInd] && original[lmaxs[upper]] < smoothed[HighInd]))
                                   if (original[lmaxs[lower]] < smoothed[HighInd] && original[lmaxs[upper]] < smoothed[HighInd]) {
                                     
                                   } else {
@@ -1326,6 +1198,7 @@ Calculate1 = R6Class ('Calculate1',
                                   }
                                 } else {
                                   #contingency for border cases
+                                  #print(c('FALSE here means cutting',i == min(length(mins),length(maxs))-(length(mins)==length(maxs))*1,original[lmaxs[lower]] < smoothed[HighInd]))
                                   if (i == min(length(mins),length(maxs))-(length(mins)==length(maxs))*1 && original[lmaxs[lower]] < smoothed[HighInd]) {
                                     
                                   } else {
@@ -1354,6 +1227,9 @@ Calculate1 = R6Class ('Calculate1',
                           HighIndEnd = max(mins[length(mins)], maxs[length(maxs)])
                           LowIndEnd = min(mins[length(mins)], maxs[length(maxs)])
                           
+                          #print(limit)
+                          #print(abs(smoothed[LowIndBeg] - smoothed[HighIndBeg]))
+                          #print(abs(smoothed[LowIndBeg] - smoothed[HighIndBeg])<limit)
                           if (abs(smoothed[LowIndBeg] - smoothed[HighIndBeg])<limit) {
                             if(LowIndBeg == mins[1]) {
                               mins = mins[-1]
@@ -1362,6 +1238,7 @@ Calculate1 = R6Class ('Calculate1',
                             }
                           }
                           
+                          #print(c(abs(smoothed[HighIndEnd] - smoothed[LowIndEnd]),abs(smoothed[HighIndEnd] - smoothed[LowIndEnd])<limit))
                           if (abs(smoothed[HighIndEnd] - smoothed[LowIndEnd])<limit) {
                             if (HighIndEnd == mins[length(mins)]) {
                               mins = mins[-length(mins)]
@@ -1387,6 +1264,7 @@ Calculate1 = R6Class ('Calculate1',
                           
                           logic = all(diffs>limit)
                           
+                          #print(c(diffs, logic, limit))
                           return (!logic)
                         },
                         
@@ -1447,14 +1325,8 @@ Calculate1 = R6Class ('Calculate1',
                           f_Glucose = 1.509 * ((log(Glucose) ^ 1.084) - 5.381)
                           r_Glucose = 10 * (f_Glucose ^ 2)
                           
-                          rl = r_Glucose
-                          rl[f_Glucose > 0] = 0
-                          
-                          rh = r_Glucose
-                          rh[f_Glucose < 0] = 0
-                          
-                          LBGI = mean(rl)
-                          HBGI = mean(rh)
+                          LBGI = mean(r_Glucose[f_Glucose > 0])
+                          HBGI = mean(r_Glucose[f_Glucose < 0])
                           
                           namea = paste0("LBGI", name)
                           nameb = paste0("HBGI", name)
@@ -1475,154 +1347,20 @@ Calculate1 = R6Class ('Calculate1',
                         calculateAUC = function (df, name = "", interval = private$Measurement$interval) {
                           Glucose = df$Glucose[!is.na(df$Glucose)]
                           x = seq(from = 0, length.out = length(Glucose), by = interval)
-                          AUC = MESS::auc(x = x, y = Glucose, type = "linear")/(length(Glucose)*interval)
-                          nameAUC = paste0("AUC", name, "[h * glucose / length]")
-                          private$Output[[nameAUC]] = AUC
-                          
-                          # AUC > 140
-                          Glucose_140 = Glucose - 140
-                          Glucose_140[Glucose_140<0] = 0
-                          AUC_140 = MESS::auc(x = x, y = Glucose_140, type = "linear")/(length(Glucose)*interval)
-                          name140 = paste0("AUC over 140mg/dl", name, "[h * glucose / length]")
-                          private$Output[[name140]] = AUC_140
-                          
-                          # AUC > 180
-                          Glucose_180 = Glucose - 180
-                          Glucose_180[Glucose_180<0] = 0
-                          AUC_180 = MESS::auc(x = x, y = Glucose_180, type = "linear")/(length(Glucose)*interval)
-                          name180 = paste0("AUC over 180mg/dl", name, "[h * glucose / length]")
-                          private$Output[[name180]] = AUC_180
-                          
-                          # AUC > 250
-                          Glucose_250 = Glucose - 250
-                          Glucose_250[Glucose_250<0] = 0
-                          AUC_250 = MESS::auc(x = x, y = Glucose_250, type = "linear")/(length(Glucose)*interval)
-                          name250 = paste0("AUC over 250mg/dl", name, "[h * glucose / length]")
-                          private$Output[[name250]] = AUC_250
-                          
-                          # AUC < 54
-                          Glucose_54 = Glucose
-                          Glucose_54[Glucose_54>54] = 54
-                          AUC_54 = MESS::auc(x=x, y = rep(54, length(Glucose_54)), type = 'linear') - (MESS::auc(x=x, y = Glucose_54, type='linear'))
-                          AUC_54 = AUC_54/(length(Glucose)*interval)
-                          name54 = paste0("AUC below 54mg/dl", name)
-                          private$Output[[name54]] = AUC_54
-                          
-                          # AUC < 70
-                          Glucose_70 = Glucose
-                          Glucose_70[Glucose_70>70] = 70
-                          AUC_70 =  MESS::auc(x=x, y = rep(70, length(Glucose_70)), type = 'linear') - (MESS::auc(x=x, y = Glucose_70, type='linear'))
-                          AUC_70 = AUC_70/(length(Glucose)*interval)
-                          name70 = paste0("AUC below 70mg/dl", name)
-                          private$Output[[name70]] = AUC_70
-                          
-                        },
-                        
-                        calculateHypoEvents = function(df, name = "", interval = private$Measurement$interval) {
-                          timepointsPerQuarter = 15/interval
-                          Glucose = df$Glucose
-                          begin_threshold = 54
-                          end_threshold = 70
-                          
-                          hypo = which(Glucose < begin_threshold)
-                          listOfHypoVectors = list()
-                          tryCatch({
-                            if (length(hypo) >= timepointsPerQuarter) {
-                              countHypo = 1
-                              
-                              for (i in 1:(length(hypo)-1)) {
-                                elem = abs(hypo[i+1] - hypo[i])
-                                if (elem == 1) {
-                                  countHypo = countHypo + 1
-                                  if (countHypo == 3) {
-                                    listOfHypoVectors = append(listOfHypoVectors, c(list(c(hypo[i-1], hypo[i], hypo[i+1]))))
-
-                                  }
-                                  if (countHypo > 3) {
-                                    listOfHypoVectors[[length(listOfHypoVectors)]] = c(listOfHypoVectors[[length(listOfHypoVectors)]], hypo[i+1])
-                                  }
-                                }
-                                
-                                if (elem == 2 || elem == 3) {
-                                  countHypo = countHypo + elem
-                                  listOfHypoVectors[[length(listOfHypoVectors)]] = c(listOfHypoVectors[[length(listOfHypoVectors)]], hypo[i:(i+1)])
-                                }
-                                
-                                if (elem > 3) {
-                                  countHypo = 1
-                                }
-                                
-                              }
-                            }
-                          
-                            check = rep(0, length(listOfHypoVectors))
-                            
-                            # The goal of this is to identify indices of last element signifying end of hypo event
-                            # It gets harder, because some hypo events can end and encompass more than one hypo vector
-                            # in listOfHypoVectors, hence the additional code
-                            for (i in 1:length(listOfHypoVectors)) {
-                              if (check[i] == 1) next
-                              lastIndInHypoVector = listOfHypoVectors[[i]][length(listOfHypoVectors[[i]])]
-                              counter = 0
-                              for (j in (lastIndInHypoVector):length(Glucose)) {
-                                if(i != length(listOfHypoVectors)) {
-                                  if (j == listOfHypoVectors[[i+1]][length(listOfHypoVectors[[i+1]])]) {
-                                    check[i+1] = 1
-                                  }
-                                }
-                                if (Glucose[j] > end_threshold) {
-                                  counter=counter + 1
-                                  listOfHypoVectors[[i]] = c(listOfHypoVectors[[i]], j)
-                                } else {
-                                  listOfHypoVectors[[i]] = c(listOfHypoVectors[[i]], j)
-                                }
-                                if (counter == timepointsPerQuarter) break
-                                
-                              }
-                              
-                            }
-                            
-                          listOfHypoVectors = listOfHypoVectors[!as.logical(check)]
-                          for (i in 1:(length(listOfHypoVectors))) {
-                            listOfHypoVectors[[i]] = unique(listOfHypoVectors[[i]])
-                          }
-                          
-                          meanDurationOfHypoEvent = 0
-                          hypoEventNumber = 0
-                          prolongedHypoEventNumber = 0
-                          
-                          hypoEventNumber = hypoEventNumber + length(listOfHypoVectors)
-                          prolongedHypoEventNumber = prolongedHypoEventNumber + 
-                            length(which((sapply(listOfHypoVectors, length, simplify = T) * interval) > 120))
-                          
-                          if (hypoEventNumber > 0) {
-                            lengths = sapply(listOfHypoVectors, length, simplify = T)
-                            meanDurationOfHypoEvent = mean(lengths * interval)
-                          }
-                          
-                          nameHypoEvents = paste0("Number of hypoglycemic events", name)
-                          nameHypoEventsDuration = paste0("Mean duration of a hypoglycemic event", name, "[min]")
-                          nameProlongedEvents = paste0("Number of prolonged (>120 min) hypoglycemic events", name)
-                          
-                          private$Output[[nameHypoEvents]] = hypoEventNumber
-                          private$Output[[nameHypoEventsDuration]] = meanDurationOfHypoEvent
-                          private$Output[[nameProlongedEvents]] = prolongedHypoEventNumber
-                        }, error = function(error) {
-                          meanDurationOfHypoEvent = 0
-                          hypoEventNumber = 0
-                          prolongedHypoEventNumber = 0
-
-                          nameHypoEvents = paste0("Number of hypoglycemic events", name)
-                          nameHypoEventsDuration = paste0("Mean duration of a hypoglycemic event", name, "[min]")
-                          nameProlongedEvents = paste0("Number of prolonged (>120 min) hypoglycemic events", name)
-
-                          private$Output[[nameHypoEvents]] = hypoEventNumber
-                          private$Output[[nameHypoEventsDuration]] = meanDurationOfHypoEvent
-                          private$Output[[nameProlongedEvents]] = prolongedHypoEventNumber
-                        })
+                          res = tryCatch(MESS::auc(x = x, y = Glucose, type = "spline"),
+                                         warning = function(e) {
+                                           MESS::auc(x = x, y = Glucose, type = "spline")
+                                         },
+                                         error= function(e) {
+                                           -1
+                                         })
+                          name = paste0("AUC", name)
+                          private$Output[[name]] = res
                         }
+                        
                       ),
                       active = list (
                         
                       )
 )
+
